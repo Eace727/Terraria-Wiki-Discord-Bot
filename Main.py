@@ -26,7 +26,7 @@ async def on_message(message):
     if message.content.startswith('karan'):
         await message.channel.send('What a Cutie')
         await message.channel.send(file=discord.File('Karan.jpg'))
-    if message.content.startswith('eman'):
+    if message.content.startswith('Ethan'):
         await message.channel.send('What a Cutie')
         await message.channel.send(file=discord.File('Ethan.jpg'))
     
