@@ -26,11 +26,10 @@ async def on_message(message):
     if message.content.startswith('eman'):
         await message.channel.send('What a Cutie')
         await message.channel.send(file=discord.File('Ethan.jpg'))
-    if message.content.startswith('estavel'):
-        await message.channel.send('What a Cutie')
-        await message.channel.send(file=discord.File('karan.jpg'))
     if message.content.startswith('lock in'):
         await message.channel.send('We getting a internship!!!!!')
+
+        #this
     
 
 client.run('MTI3NzMzNjY5MTY1NjM2MDA0OA.GH-rq9.o88agbxuKiYs9VxVVsbGvcVqLDI_rMUSlTDLt4')
