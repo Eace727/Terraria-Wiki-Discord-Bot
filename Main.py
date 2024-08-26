@@ -34,4 +34,4 @@ async def on_message(message):
 #This is crazy bro caint belive it
     
 
-client.run('MTI3NzMzNjY5MTY1NjM2MDA0OA.GH-rq9.o88agbxuKiYs9VxVVsbGvcVqLDI_rMUSlTDLt4')
+client.run('MTI3NzMzNjY5MTY1NjM2MDA0OA.GeruJl.jwAdGaDG81W_n9R75e9WcbeuPwFlHyjdhuCpSU')
