@@ -1,5 +1,8 @@
 import discord
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -34,4 +37,4 @@ async def on_message(message):
 #This is crazy bro caint belive it
     
 
-client.run('MTI3NzMzNjY5MTY1NjM2MDA0OA.GeruJl.jwAdGaDG81W_n9R75e9WcbeuPwFlHyjdhuCpSU')
+client.run(os.getenv('TOKEN'))
