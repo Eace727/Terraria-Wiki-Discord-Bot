@@ -33,9 +33,5 @@ async def on_message(message):
         await message.channel.send('What a Cutie')
         await message.channel.send(file=discord.File('karan.jpg'))
 
-@client.command()
-async def shutdown(ctx):
-    await ctx.send("Shutting down...")
-    await client.close()
 
 client.run(os.getenv('TOKEN'))
