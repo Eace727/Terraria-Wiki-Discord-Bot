@@ -22,20 +22,31 @@ async def on_ready():
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message("Pong!")
 
+#Creating a button?? idk tbh
+class MyView(discord.ui.View):
+    @discord.ui.button(label="Click", style=discord.ButtonStyle.primary)
+    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await interaction.response.send_message("Hip Hip Hooray!!!")
+
+
 # Welcome Message to test embeds
 @client.tree.command(name="welcome-boogaloo", description="It's a welcomeer message")
-async def embed(interaction: discord.Interaction):
+async def welcome(interaction: discord.Interaction):
     #Create the embed
     embed = discord.Embed(
         title="Welcome to the server crodie",
         description="epic embed success",
-        color=discord.Color.orange()
+        color=discord.Color.green()
     )
-    #sets up fields and footer
+    #sets up fields and footer this is NOT in the embed thing above
     embed.add_field(name="Field 1,", value="Value 1", inline=True)
     embed.add_field(name="Field 2,", value="Value 2", inline=True)
+    embed.set_image(url="https://i1.sndcdn.com/artworks-C6yjsFe6xHn2Edqk-dLKqOA-t500x500.jpg")
     embed.set_footer(text="I love feet!")
 
+    #make a button/view
+    view = MyView()
+    #for posting the embed just copy this for a new embed
     await interaction.response.send_message(embed=embed)
 
 # searches the terraria wiki for the given search term
