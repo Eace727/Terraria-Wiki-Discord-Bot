@@ -22,6 +22,21 @@ async def on_ready():
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message("Pong!")
 
+# Welcome Message to test embeds
+@client.tree.command(name="welcome", description="It's a welcome message")
+async def embed(interaction: discord.Interaction):
+    #Create the embed
+    embed = discord.Embed(
+        title="Welcome to the server crodie",
+        description="epic embed success",
+        color=discord.Color.orange()
+    )
+    #sets up fields and footer
+    embed.add_field(name="Field 1,", value="Value 1", inline=True)
+    embed.add_field(name="Field 2,", value="Value 2", inline=True)
+    embed.set_footer(text="I love feet!")
+    await interaction.response.send_message(embed=embed)
+
 # searches the terraria wiki for the given search term
 @client.tree.command(name="search", description="search the terraria wiki")
 async def search_wiki(interaction: discord.Interaction, search: str):
