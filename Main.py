@@ -30,25 +30,34 @@ async def search_wiki(interaction: discord.Interaction, search: str):
     params = {
         "action": "query",
         "format": "json",
-        "list": "search",
-        "srsearch": search
+        "prop": "extracts",
+        "titles": search,
     }
 
     response = requests.get(url, params=params)
     data = response.json()
 
-    if data["query"]["search"]:
-        # Retrieve the first search result
-        result = data["query"]["search"][0]
-        title = result["title"]
-        snippet = result["snippet"]
+    if response.status_code != 200:
+        await interaction.response.send_message(f"Error fetching page: {response.status_code}")
+        return
+    
+    data = response.json()
 
-        # Format the response message
-        message = f"**{title}**\n{snippet}..."
+    # Print out the response data to debug
+    print(data)
+
+    pages = data.get("query", {}).get("pages", {})
+    if pages and "revisions" in pages[0]:
+        content = pages[0]["revisions"][0]["content"]
+
+        # Truncate the message if it's too long for Discord
+        if len(content) > 2000:
+            content = content[:2000] + "...\nContent too long. Please check the wiki for more details."
+
+        await interaction.response.send_message(content)
     else:
-        message = "No results found."
+        await interaction.response.send_message("No pages found with that title or no content available.")
 
-    await interaction.response.send_message(message)
 
 
 client.run(os.getenv('TOKEN'))
