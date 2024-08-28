@@ -30,7 +30,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
     params = {
         "action": "query",
         "format": "json",
-        "prop": "extracts",
+        "prop": "revisions",
         "titles": search,
     }
 
