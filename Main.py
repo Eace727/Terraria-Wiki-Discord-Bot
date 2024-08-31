@@ -33,7 +33,7 @@ class ButtonView(discord.ui.View):
     #Creating the actual button itself
     @discord.ui.button(label="Button 1", style=discord.ButtonStyle.primary)
     async def button1_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        #Ephemeral dictates
+        #Ephemeral dictates whether or not the response is visible to all or just button clicker (False for all, True for just button clicker)
         await interaction.response.send_message("Hooray!!!!", ephemeral=False)
 
 
