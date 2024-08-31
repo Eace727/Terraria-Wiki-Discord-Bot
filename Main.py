@@ -22,11 +22,20 @@ async def on_ready():
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message("Pong!")
 
-#Creating a button?? idk tbh
-class MyView(discord.ui.View):
-    @discord.ui.button(label="Click", style=discord.ButtonStyle.primary)
-    async def button_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
-        await interaction.response.send_message("Hip Hip Hooray!!!")
+#Creating a button
+#Basically inheriting ButtonView from discord.ui.View
+class ButtonView(discord.ui.View):
+    #calls init from ButtonView
+    def __init__(self):
+        #this lines ensures that init from discord.ui is also called
+        super().__init__()
+
+    #Creating the actual button itself
+    @discord.ui.button(label="Button 1", style=discord.ButtonStyle.primary)
+    async def button1_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("Hooray!!!!", ephemeral=True)
+
+
 
 
 # Welcome Message to test embeds
@@ -45,9 +54,9 @@ async def welcome(interaction: discord.Interaction):
     embed.set_footer(text="I love feet!")
 
     #make a button/view
-    view = MyView()
+    view = ButtonView()
     #for posting the embed just copy this for a new embed
-    await interaction.response.send_message(embed=embed)
+    await interaction.response.send_message(embed=embed, view=view)
 
 # searches the terraria wiki for the given search term
 @client.tree.command(name="search", description="search the terraria wiki")
