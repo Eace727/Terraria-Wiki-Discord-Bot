@@ -54,7 +54,7 @@ async def welcome(interaction: discord.Interaction):
     embed.set_image(url="https://i1.sndcdn.com/artworks-C6yjsFe6xHn2Edqk-dLKqOA-t500x500.jpg")
     embed.set_footer(text="I love feet!")
 
-    #make a button/view
+    #Add the Button
     view = ButtonView()
     #for posting the embed just copy this for a new embed
     await interaction.response.send_message(embed=embed, view=view)
