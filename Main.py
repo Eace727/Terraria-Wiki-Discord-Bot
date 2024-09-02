@@ -3,7 +3,7 @@ import os
 from discord.ext import commands
 from dotenv import load_dotenv
 import requests
-from html.parser import HTMLParser
+from bs4 import BeautifulSoup
 
 load_dotenv()
 intents = discord.Intents.default()
@@ -21,23 +21,12 @@ async def on_ready():
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message("Pong!")
 
-# HTML Parser class to extract text from HTML
-class HTMLTextExtractor(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.reset()
-        self.convert_charrefs = True
-        self.text_parts = []
-
-    def handle_data(self, d):
-        self.text_parts.append(d)
-
-    def get_text(self):
-        return ''.join(self.text_parts)
-
 # Searches the Terraria wiki for the given search term
 @client.tree.command(name="search", description="Search the Terraria wiki")
 async def search_wiki(interaction: discord.Interaction, search: str):
+    # Defer the response to avoid the 3 second timeout limit on discord
+    await interaction.response.defer()
+
     url = "https://terraria.wiki.gg/api.php"
     
     params = {
@@ -46,48 +35,39 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         "page": search,
         "prop": "text",
     }
+
     # Make a request to the Terraria wiki API
     response = requests.get(url, params=params)
 
     # Check if the request was successful
     if response.status_code != 200:
-        await interaction.response.send_message(f"Error fetching page: {response.status_code}")
+        await interaction.followup.send(f"Error fetching page: {response.status_code}")
         return
-    
-    data = response.json()
-
-    ## Searches other parts of the page that parse doesnt get
-    #'
-    #params = {
-    #    "action": "query",
-    #    "format": "json",
-    #    "list": "search",
-    #    "srsearch": search,
-    #}
-    #response = requests.get(url, params=params)
-    #data2 = response.json()
-    #
-    #search_results = data2.get("query", {}).get("search", [])
-    #print(search_results)
-    # '
 
     # Extract the HTML content
-    html_content = data.get("parse", {}).get("text", {}).get("*", "")
+    html_content = response.json()["parse"]["text"]["*"]
 
     if html_content:
-        # Create an instance of the HTMLTextExtractor
-        extractor = HTMLTextExtractor()
-        extractor.feed(html_content)
-        text_content = extractor.get_text()
-        print(text_content)
+        # Switched from htmlparser to Beautiful soup for better parsing
+        soup = BeautifulSoup(html_content, 'html.parser')
+        paragraphs = soup.find_all('p')
+        text_content = ""
+        for p in paragraphs:
+            print(p.get_text())
+        if len(paragraphs) > 1:
+            for i in range(len(paragraphs)):
+                if paragraphs[i].get_text() != "": 
+                    text_content += paragraphs[i].get_text() + "\n"
+        else:
+            text_content = paragraphs[0].get_text()
 
         # Truncate the message if it's too long for Discord
         if len(text_content) > 2000:
-            text_content = text_content[:1800] + "...\nContent too long. Please check the wiki for more details."
+            text_content = text_content[:1900] + "...\nContent too long. Please check the wiki for more details."
 
         
-        await interaction.response.send_message(text_content)
+        await interaction.followup.send(text_content)
     else:
-        await interaction.response.send_message("No pages found with that title or no content available.")
+        await interaction.followup.send("No pages found with that title or no content available.")
 
 client.run(os.getenv('TOKEN'))
