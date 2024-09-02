@@ -50,22 +50,31 @@ async def search_wiki(interaction: discord.Interaction, search: str):
     if html_content:
         # Switched from htmlparser to Beautiful soup for better parsing
         soup = BeautifulSoup(html_content, 'html.parser')
-        paragraphs = soup.find_all('p')
         text_content = ""
-        for p in paragraphs:
-            print(p.get_text())
+
+        paragraphs = soup.find_all('p')
+        Description = ""
+        #for p in paragraphs:             #debugging for paragraphs
+        #    print(p.get_text())
         if len(paragraphs) > 1:
             for i in range(len(paragraphs)):
                 if paragraphs[i].get_text() != "": 
-                    text_content += paragraphs[i].get_text() + "\n"
+                    Description += paragraphs[i].get_text() + "\n"
         else:
-            text_content = paragraphs[0].get_text()
+            Description = paragraphs[0].get_text()
+
+
+        something = soup.find_all('td')
+        for td in something:                #debugging for list items
+            print(td.get_text())
+        for i in range(len(something)):
+            if something[i].get_text() != "":
+                text_content += something[i].get_text() + "\n"
 
         # Truncate the message if it's too long for Discord
         if len(text_content) > 2000:
             text_content = text_content[:1900] + "...\nContent too long. Please check the wiki for more details."
-
-        
+    
         await interaction.followup.send(text_content)
     else:
         await interaction.followup.send("No pages found with that title or no content available.")
