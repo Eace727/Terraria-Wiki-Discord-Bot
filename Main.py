@@ -27,8 +27,26 @@ async def search_wiki(interaction: discord.Interaction, search: str):
     # Defer the response to avoid the 3 second timeout limit on discord
     await interaction.response.defer()
 
-    url = "https://terraria.wiki.gg/api.php"
+    # Exception Words that need to be capitalized differently
+    # (make sure to capitalize all words
+    # eg. "hand of creation" -> "Hand Of Creation")
+    ExceptionWords = [
+        "Hand Of Creation",
+        "Can Of Worms",
+        "Grox The Great's Wings",
+        "Grox The Great's Horned Cowl",
+        "Grox The Great's Chestplate",
+        "Grox The Great's Greaves",
+        ]
     
+    # Capitalize the first letter of each word in the search term except for "of" and "the"
+    search = search.title()
+    if search not in ExceptionWords:
+        search = search.replace("Of", "of")
+        search = search.replace("The", "the")
+
+ 
+    url = "https://terraria.wiki.gg/api.php"
     params = {
         "action": "parse",
         "format": "json",
@@ -42,10 +60,9 @@ async def search_wiki(interaction: discord.Interaction, search: str):
     # Check if the request was successful
     if response.status_code != 200:
         await interaction.followup.send(f"Error fetching page: {response.status_code}")
-        return
 
     # Extract the HTML content
-    html_content = response.json()["parse"]["text"]["*"]
+    html_content = response.json().get("parse", {}).get("text", {}).get("*")
 
     if html_content:
         # Switched from htmlparser to Beautiful soup for better parsing
