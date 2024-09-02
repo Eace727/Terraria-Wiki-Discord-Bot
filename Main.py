@@ -24,17 +24,30 @@ async def ping(interaction: discord.Interaction):
 
 #Creating a button
 #Basically inheriting ButtonView from discord.ui.View
-class ButtonView(discord.ui.View):
+class SelectView(discord.ui.View):
     #calls init from ButtonView
     def __init__(self):
         #this lines ensures that init from discord.ui is also called
         super().__init__()
 
+    #create the options
+    options =[
+        discord.SelectOption(label="Bruh 1", description="Bruh the first"),
+        discord.SelectOption(label="Bruh 2", description="Bruh the second"),
+        discord.SelectOption(label="Bruh 3", description="Bruh the third")
+    ]
     #Creating the actual button itself
-    @discord.ui.button(label="Button 1", style=discord.ButtonStyle.primary)
-    async def button1_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        #Ephemeral dictates whether or not the response is visible to all or just button clicker (False for all, True for just button clicker)
-        await interaction.response.send_message("Hooray!!!!", ephemeral=False)
+    @discord.ui.select(placeholder="Choose a bruh", options=options)
+
+    #Used when an option is selected
+    async def select_callback(self,select: discord.ui.Select,interaction: discord.Interaction):
+       bruhembed = discord.Embed(
+           title="Hooray!!"
+       )
+       bruhembed.set_image(url="https://tenor.com/view/kevin-gates-rbs-intro-rap-hip-hop-hiphop-gif-12113363228333707274")
+       await interaction.response.send_message(embed=bruhembed)
+
+
 
 
 
@@ -55,7 +68,7 @@ async def welcome(interaction: discord.Interaction):
     embed.set_footer(text="I love feet!")
 
     #Add the Button
-    view = ButtonView()
+    view = SelectView()
     #for posting the embed just copy this for a new embed
     await interaction.response.send_message(embed=embed, view=view)
 
