@@ -33,14 +33,12 @@ class SelectView(discord.ui.View):
     #create the options
     options =[
         discord.SelectOption(label="Bruh 1", description="Bruh the first"),
-        discord.SelectOption(label="Bruh 2", description="Bruh the second"),
-        discord.SelectOption(label="Bruh 3", description="Bruh the third")
     ]
     #Creating the actual button itself
     @discord.ui.select(placeholder="Choose a bruh", options=options)
 
     #Used when an option is selected
-    async def select_callback(self,select: discord.ui.Select,interaction: discord.Interaction):
+    async def select_callback(self,interaction: discord.Interaction):
        bruhembed = discord.Embed(
            title="Hooray!!"
        )
