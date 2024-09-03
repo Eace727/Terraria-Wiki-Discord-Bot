@@ -39,12 +39,30 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         "Grox The Great'S Greaves",
         ]
     
+    # Words that need to be lowercase 
+    LowercaseWords = [
+        "Attack Speed",
+        "Critical Hit",
+        "Npc Drops",
+        "Day And Night Cycle",  
+        "Moon Phase",
+        "Player Stats",
+        "Status Messages",
+        "World Size",
+    ]
+
     # Capitalize the first letter of each word in the search term except for "of" and "the"
     search = search.title()
     if search not in ExceptionWords:
         search = search.replace("Of", "of")
         search = search.replace("The", "the")
         search = search.replace("'S", "'s")
+
+    # lowercase the second word if it is in the Mechanics list
+    if search in LowercaseWords:
+        search = search.lower()
+
+    print (search)
  
     url = "https://terraria.wiki.gg/api.php"
     params = {
@@ -70,6 +88,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         soup = BeautifulSoup(html_content, 'html.parser')
         text_content = ""
 
+        # Get the first or all paragraphs of the page
         paragraphs = soup.find_all('p')
         Description = ""
         #for p in paragraphs:             #debugging for paragraphs
@@ -78,9 +97,10 @@ async def search_wiki(interaction: discord.Interaction, search: str):
             for i in range(len(paragraphs)):
                 if paragraphs[i].get_text() != "": 
                     Description += paragraphs[i].get_text() + "\n"
-        else:
+        elif len(paragraphs) == 1:
             Description = paragraphs[0].get_text()
 
+        # Get the types of the item if it is an item
         types = ""
         tables = soup.find_all('table')
         if len(tables) > 0:
@@ -93,19 +113,22 @@ async def search_wiki(interaction: discord.Interaction, search: str):
 
         # Get the first image that is not a version image
         Versions = [
-            "Desktop version",
-            "Console version",
-            "Mobile version",
+            "/images/7/72/Desktop_only.png",
+            "/images/6/6c/Console_only.png",
+            "/images/b/b2/Mobile_only.png",
+            "/images/4/4e/Old-Gen_Console_only.png",
+            "https://commons.wiki.gg/images/8/8d/3DS.svg",
+            "https://commons.wiki.gg/images/0/0f/New_Nintendo_3DS.svg"
         ]
         
         image_url = ""
         images = soup.find_all('img')
         if len(images) > 0:
-            for i in range(len(images)): 
-                if images[i]['alt'] not in Versions:
+            for i in range(len(images)):
+                 if images[i]['src'] not in Versions:
                     image_url = images[i]['src']
                     break
-
+        
         print (image_url)
 
         text_content = Description
