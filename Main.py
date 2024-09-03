@@ -54,16 +54,31 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         "prop": "text",
         "redirects": "true",
     }
-    
+
+    paramsimage = {
+        "action": "query",
+        "format": "json",
+        "title": search,
+        "prop": "imageinfo",
+        "iiprop": "url",
+    }
+
     # Make a request to the Terraria wiki API
     response = requests.get(url, params=params)
+    image_response = requests.get(url, params=paramsimage)
 
     # Check if the request was successful
     if response.status_code != 200:
         await interaction.followup.send(f"Error fetching page: {response.status_code}")
 
-    # Extract the HTML content
+    # Extract the HTML and Image content
     html_content = response.json().get("parse", {}).get("text", {}).get("*")
+    image_content = image_response.json().get("query", {}).get("pages", {})
+    image_urls = []
+    for page_id, page_data in image_content.items():
+        if "imageinfo" in page_data:
+            image_info = page_data["imageinfo"][0]
+            image_urls.append(image_info["url"])
 
     if html_content:
         # Switched from htmlparser to Beautiful soup for better parsing
@@ -81,13 +96,18 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         else:
             Description = paragraphs[0].get_text()
 
+        types = ""
+        tables = soup.find_all('table')
+        temp = tables[0].find_all('td')
+        temp2 = temp[0].find_all('a')
+        for i in range(len(temp2)):
+            types += temp2[i].get_text() + "\n"
 
-        something = soup.find_all('td')
-        for td in something:                #debugging for list items
-            print(td.get_text())
-        for i in range(len(something)):
-            if something[i].get_text() != "":
-                text_content += something[i].get_text() + "\n"
+        # Get the image URL
+
+        print (image_urls)
+
+        text_content = Description
 
         # Truncate the message if it's too long for Discord
         if len(text_content) > 2000:
