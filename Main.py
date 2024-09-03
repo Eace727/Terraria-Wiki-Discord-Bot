@@ -28,15 +28,15 @@ async def search_wiki(interaction: discord.Interaction, search: str):
     await interaction.response.defer()
 
     # Exception Words that need to be capitalized differently
-    # (make sure to capitalize all words
-    # eg. "hand of creation" -> "Hand Of Creation")
+    # (make sure to capitalize all words including letters after an apostrophe
+    # eg. "Grox the Great's wings" -> "Grox The Great'S Wings")
     ExceptionWords = [
         "Hand Of Creation",
         "Can Of Worms",
-        "Grox The Great's Wings",
-        "Grox The Great's Horned Cowl",
-        "Grox The Great's Chestplate",
-        "Grox The Great's Greaves",
+        "Grox The Great'S Wings",
+        "Grox The Great'S Horned Cowl",
+        "Grox The Great'S Chestplate",
+        "Grox The Great'S Greaves",
         ]
     
     # Capitalize the first letter of each word in the search term except for "of" and "the"
@@ -44,7 +44,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
     if search not in ExceptionWords:
         search = search.replace("Of", "of")
         search = search.replace("The", "the")
-
+        search = search.replace("'S", "'s")
  
     url = "https://terraria.wiki.gg/api.php"
     params = {
@@ -52,8 +52,9 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         "format": "json",
         "page": search,
         "prop": "text",
+        "redirects": "true",
     }
-
+    
     # Make a request to the Terraria wiki API
     response = requests.get(url, params=params)
 
