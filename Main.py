@@ -55,17 +55,8 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         "redirects": "true",
     }
 
-    paramsimage = {
-        "action": "query",
-        "format": "json",
-        "title": search,
-        "prop": "imageinfo",
-        "iiprop": "url",
-    }
-
     # Make a request to the Terraria wiki API
     response = requests.get(url, params=params)
-    image_response = requests.get(url, params=paramsimage)
 
     # Check if the request was successful
     if response.status_code != 200:
@@ -73,12 +64,6 @@ async def search_wiki(interaction: discord.Interaction, search: str):
 
     # Extract the HTML and Image content
     html_content = response.json().get("parse", {}).get("text", {}).get("*")
-    image_content = image_response.json().get("query", {}).get("pages", {})
-    image_urls = []
-    for page_id, page_data in image_content.items():
-        if "imageinfo" in page_data:
-            image_info = page_data["imageinfo"][0]
-            image_urls.append(image_info["url"])
 
     if html_content:
         # Switched from htmlparser to Beautiful soup for better parsing
@@ -98,22 +83,38 @@ async def search_wiki(interaction: discord.Interaction, search: str):
 
         types = ""
         tables = soup.find_all('table')
-        temp = tables[0].find_all('td')
-        temp2 = temp[0].find_all('a')
-        for i in range(len(temp2)):
-            types += temp2[i].get_text() + "\n"
+        if len(tables) > 0:
+            temp = tables[0].find_all('td')
+            temp2 = temp[0].find_all('a')
+            for i in range(len(temp2)):
+                types += temp2[i].get_text() + "\n"
 
         # Get the image URL
 
-        print (image_urls)
+        # Get the first image that is not a version image
+        Versions = [
+            "Desktop version",
+            "Console version",
+            "Mobile version",
+        ]
+        
+        image_url = ""
+        images = soup.find_all('img')
+        if len(images) > 0:
+            for i in range(len(images)): 
+                if images[i]['alt'] not in Versions:
+                    image_url = images[i]['src']
+                    break
+
+        print (image_url)
 
         text_content = Description
 
         # Truncate the message if it's too long for Discord
         if len(text_content) > 2000:
-            text_content = text_content[:1900] + "...\nContent too long. Please check the wiki for more details."
+            text_content = text_content[:1800] + "...\nContent too long. Please check the wiki for more details."
     
-        await interaction.followup.send(text_content)
+        await interaction.followup.send('https://terraria.wiki.gg' + image_url + '\n'+ text_content)
     else:
         await interaction.followup.send("No pages found with that title or no content available.")
 
