@@ -21,6 +21,34 @@ async def on_ready():
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message("Pong!")
 
+
+class SelectView(discord.ui.View):
+    #calls init from SelectView
+    def __init__(self):
+        #ensures init from discord.ui is also called
+        super().__init__()
+    
+    #Create Options
+    options =[
+        discord.SelectOption(label="Description"),
+        discord.SelectOption(label="Stats")
+    ]
+
+    @discord.ui.select(placeholder="Sections", options=options)
+
+    async def select_callback(self, interaction: discord.Interaction,select: discord.ui.Select):
+        selected_option = select.values[0]
+        #For Description
+        if selected_option =="Description":
+            print("description")
+        #For stats
+        elif selected_option =="Stats":
+            print("stats")
+    
+
+
+
+    
 # Searches the Terraria wiki for the given search term
 @client.tree.command(name="search", description="Search the Terraria wiki")
 async def search_wiki(interaction: discord.Interaction, search: str):
