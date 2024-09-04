@@ -37,7 +37,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         "Grox The Great'S Horned Cowl",
         "Grox The Great'S Chestplate",
         "Grox The Great'S Greaves",
-        ]
+    ]
     
     # Words that need to be lowercase 
     LowercaseWords = [
@@ -72,6 +72,8 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         "prop": "text",
         "redirects": "true",
     }
+
+    search = search.replace(" ", "_")
 
     # Make a request to the Terraria wiki API
     response = requests.get(url, params=params)
@@ -155,8 +157,8 @@ async def search_wiki(interaction: discord.Interaction, search: str):
 
         # Get the image URL
 
-        # Get the first image that is not a version image
-        Versions = [
+        # Get the first image that is not a version/event/mode image
+        VersionEventMode = [
             "/images/7/72/Desktop_only.png",
             "/images/6/6c/Console_only.png",
             "/images/b/b2/Mobile_only.png",
@@ -165,32 +167,58 @@ async def search_wiki(interaction: discord.Interaction, search: str):
             "https://commons.wiki.gg/images/0/0f/New_Nintendo_3DS.svg",
             "/images/6/62/Expert_Mode.png",
             "/images/9/9b/Master_Mode.png",
+            "/images/4/44/Horn_o%27_plenty.png",
+            "/images/2/2f/Bestiary_Christmas.png",
+            "/images/8/82/Suspicious_Looking_Egg.png",
+            "/images/3/39/Bestiary_Halloween.png",
+            "/images/d/df/Valentine_Ring.png",
+            "/images/thumb/4/44/Soul_Scythe.png/32px-Soul_Scythe.png",
         ]
         
         image_url = ""
         images = soup.find_all('img')
         if len(images) > 0:
             for i in range(len(images)):
-                 if images[i]['src'] not in Versions:
-                    image_url = images[i]['src']
+                 if images[i]['src'] not in VersionEventMode:
+                    image_url = "https://terraria.wiki.gg" + images[i]['src']
                     break
         
+        # Check if there are crafting tables
+        craftingTables = False
+        Headers = soup.find_all('h2')
+        for i in range(len(Headers)):
+            h2span = Headers[i].find_all('span')
+            if len(h2span) > 0 and h2span[0].get_text() == "Crafting":
+                craftingTables = True
+                break
+
+        # Check if it has a Recipe and/or Used in table
+        Recipe = False
+        UsedIn = False
+        if craftingTables:
+            Headers = soup.find_all('h3')
+            for i in range(len(Headers)):
+                h3span = Headers[i].find_all('span')
+                if len(h3span) > 0 and h3span[0].get_text() == "Recipe":
+                    Recipe = True
+                elif len(h3span) > 0 and h3span[0].get_text() == "Used in":
+                    UsedIn = True
+                if Recipe and UsedIn:
+                    break
+
+
         # Get the crafting recipe / Used in if it is an item
         crafting = ""
-        tables = soup.find_all('table')
-        if len(tables) > 0:
-            for i in range(len(tables)):
-                if "craft" in tables[i]['class']:
-                    tablerow = tables[i].find_all('tr')
-                    for j in range(len(tablerow)):
-                        tableData = tablerow[j].find_all('td')
-                        if len(tableData) > 0:
-                            for k in range(len(tableData)):
-                                crafting += tableData[k].get_text() + " "
-                        crafting += "\n"
+        if craftingTables:
+            tables = soup.find_all('table')
+            if len(tables) > 0:
+                for i in range(len(tables)):
+                    if tables[i]['class'] == "terraria cellborder recipes sortable jquery-tablesorter":
+                        if Recipe:
+                            crafting += "Recipe:\n"    
 
 
-        print (crafting)
+        print (craftingTables)
 
         text_content = Description
 
@@ -198,7 +226,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         if len(text_content) > 2000:
             text_content = text_content[:1800] + "...\nContent too long. Please check the wiki for more details."
     
-        await interaction.followup.send('https://terraria.wiki.gg' + image_url + '\n'+ text_content)
+        await interaction.followup.send(image_url + '\n'+ text_content)
     else:
         await interaction.followup.send("No pages found with that title or no content available.")
 
