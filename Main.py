@@ -226,7 +226,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
             if len(tables) > 0:
                 for i in range(len(tables)):
                     if tables[i]['class'] == "terraria cellborder recipes sortable jquery-tablesorter":
-                        if Recipe:
+                        if Recipes:
                             crafting += "Recipe:\n"
                             tableRow = tables[i].find_all('tr')
                             for j in range(len(tableRow)):
