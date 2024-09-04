@@ -91,25 +91,23 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         text_content = ""
 
         # Get the first or all paragraphs of the page
-        paragraphs = soup.find_all('p')
+        paraDiv = soup.find('div', class_="mw-parser-output")
+        paragraphs = paraDiv.find_all('p', recursive=False)
         Description = ""
         #for p in paragraphs:             #debugging for paragraphs
         #    print(p.get_text())
-        if len(paragraphs) > 1:
+        if len(paragraphs) > 0:
             for i in range(len(paragraphs)):
                 if paragraphs[i].get_text() != "": 
                     Description += paragraphs[i].get_text() + "\n"
-        elif len(paragraphs) == 1:
-            Description = paragraphs[0].get_text()
 
         # Get the types of the item if it is an item
         types = ""
-        tables = soup.find_all('table')
+        tables = soup.find_all('table', class_="stat")
         if len(tables) > 0:
-            temp = tables[0].find_all('td')
-            temp2 = temp[0].find_all('span')
-            for i in range(len(temp2)):
-                types += temp2[i].get_text() + "\n"
+            temp = tables[0].find_all('span', class_="nowrap tag")
+            for i in range(len(temp)):
+                types += temp[i].get_text() + "\n"
 
         # Get the statistics of the item if it is an item
 
@@ -131,24 +129,40 @@ async def search_wiki(interaction: discord.Interaction, search: str):
             "13*" : "Fiery Red",
         }
 
+        Coin = [
+            ['cc'],
+            ['sc'],
+            ['gc'],
+            ['pc'],
+        ]
+
+        CoinDict = {
+            "['cc']" : "Copper Coin(s)",
+            "['sc']" : "Silver Coin(s)",
+            "['gc']" : "Gold Coin(s)",
+            "['pc']" : "Platinum Coin(s)",
+        }
+
         statistics = ""
-        tables = soup.find_all('table')
+        tables = soup.find_all('table', class_="stat")
         if len(tables) > 0:
-            for i in range(len(tables)):
-                if "stat" in tables[i]['class']:
-                    tablerow = tables[i].find_all('tr')
+                    tablerow = tables[0].find_all('tr')
                     for j in range(len(tablerow)):
                         tableHeader = tablerow[j].find_all('th')
                         tableData = tablerow[j].find_all('td')
                         if len(tableHeader) > 0 and len(tableData) > 0:
                             statistics += tableHeader[0].get_text() + ": "  # Table Header
-                            tableDataA = tableData[0].find_all('a')
                             for k in range(len(tableData)):
                                 if tableHeader[0].get_text() == "Type":
+                                    tableDataA = tableData[k].find_all('a')
                                     for l in range(len(tableDataA)):
                                         statistics += tableDataA[l].get_text() + " " # Types
                                 elif tableHeader[0].get_text() == "Rarity":
                                     statistics += Rarity[tableData[k].get_text()] + " "
+                                elif tableHeader[0].get_text() == "Sell":
+                                    tableDataA = tableData[k].find_all('span', class_=Coin)
+                                    for l in range(len(tableDataA)):
+                                            statistics += tableDataA[l].get_text() + " "
                                 else:
                                     statistics += tableData[k].get_text() + " " # Rest of Table data
 
@@ -187,23 +201,21 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         craftingTables = False
         Headers = soup.find_all('h2')
         for i in range(len(Headers)):
-            h2span = Headers[i].find_all('span')
-            if len(h2span) > 0 and h2span[0].get_text() == "Crafting":
+            if Headers[i].find('span', id="Crafting"):
                 craftingTables = True
                 break
 
         # Check if it has a Recipe and/or Used in table
-        Recipe = False
+        Recipes = False
         UsedIn = False
         if craftingTables:
             Headers = soup.find_all('h3')
             for i in range(len(Headers)):
-                h3span = Headers[i].find_all('span')
-                if len(h3span) > 0 and h3span[0].get_text() == "Recipe":
-                    Recipe = True
-                elif len(h3span) > 0 and h3span[0].get_text() == "Used in":
+                if Headers[i].find('span', id="Recipes"):
+                    Recipes = True
+                elif Headers[i].find('span', id="Used_in"):
                     UsedIn = True
-                if Recipe and UsedIn:
+                if Recipes and UsedIn:
                     break
 
 
@@ -215,10 +227,24 @@ async def search_wiki(interaction: discord.Interaction, search: str):
                 for i in range(len(tables)):
                     if tables[i]['class'] == "terraria cellborder recipes sortable jquery-tablesorter":
                         if Recipe:
-                            crafting += "Recipe:\n"    
+                            crafting += "Recipe:\n"
+                            tableRow = tables[i].find_all('tr')
+                            for j in range(len(tableRow)):
+                                tableData = tableRow[j].find_all('td')
+                                for k in range(len(tableData)):
+                                    crafting += tableData[k].get_text() + " "
+                                crafting += "\n"
+                        if UsedIn:
+                            crafting += "Used in:\n"
+                            tableRow = tables[i].find_all('tr')
+                            for j in range(len(tableRow)):
+                                tableData = tableRow[j].find_all('td')
+                                for k in range(len(tableData)):
+                                    crafting += tableData[k].get_text() + " "
+                                crafting += "\n"
 
-
-        print (craftingTables)
+        print (Recipes)
+        print (UsedIn)
 
         text_content = Description
 
