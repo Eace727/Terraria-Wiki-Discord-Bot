@@ -62,7 +62,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
     if search in LowercaseWords:
         search = search.lower()
 
-    print (search)
+    #print (search)         #debugging for search
  
     url = "https://terraria.wiki.gg/api.php"
     params = {
@@ -105,9 +105,53 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         tables = soup.find_all('table')
         if len(tables) > 0:
             temp = tables[0].find_all('td')
-            temp2 = temp[0].find_all('a')
+            temp2 = temp[0].find_all('span')
             for i in range(len(temp2)):
                 types += temp2[i].get_text() + "\n"
+
+        # Get the statistics of the item if it is an item
+
+        # Rarity Colors
+        Rarity = {
+            "-1*" : "Gray",
+            "00*" : "White",
+            "01*" : "Blue",
+            "02*" : "Green",
+            "03*" : "Orange",
+            "04*" : "Light Red",
+            "05*" : "Pink",
+            "06*" : "Light Purple",
+            "07*" : "Lime",
+            "08*" : "Yellow",
+            "09*" : "Cyan",
+            "10*" : "Red",  
+            "12*" : "Rainbow",
+            "13*" : "Fiery Red",
+        }
+
+        statistics = ""
+        tables = soup.find_all('table')
+        if len(tables) > 0:
+            for i in range(len(tables)):
+                if "stat" in tables[i]['class']:
+                    tablerow = tables[i].find_all('tr')
+                    for j in range(len(tablerow)):
+                        tableHeader = tablerow[j].find_all('th')
+                        tableData = tablerow[j].find_all('td')
+                        if len(tableHeader) > 0 and len(tableData) > 0:
+                            statistics += tableHeader[0].get_text() + ": "  # Table Header
+                            tableDataA = tableData[0].find_all('a')
+                            for k in range(len(tableData)):
+                                if tableHeader[0].get_text() == "Type":
+                                    for l in range(len(tableDataA)):
+                                        statistics += tableDataA[l].get_text() + " " # Types
+                                elif tableHeader[0].get_text() == "Rarity":
+                                    statistics += Rarity[tableData[k].get_text()] + " "
+                                else:
+                                    statistics += tableData[k].get_text() + " " # Rest of Table data
+
+
+                        statistics += "\n"
 
         # Get the image URL
 
@@ -118,7 +162,9 @@ async def search_wiki(interaction: discord.Interaction, search: str):
             "/images/b/b2/Mobile_only.png",
             "/images/4/4e/Old-Gen_Console_only.png",
             "https://commons.wiki.gg/images/8/8d/3DS.svg",
-            "https://commons.wiki.gg/images/0/0f/New_Nintendo_3DS.svg"
+            "https://commons.wiki.gg/images/0/0f/New_Nintendo_3DS.svg",
+            "/images/6/62/Expert_Mode.png",
+            "/images/9/9b/Master_Mode.png",
         ]
         
         image_url = ""
@@ -129,7 +175,22 @@ async def search_wiki(interaction: discord.Interaction, search: str):
                     image_url = images[i]['src']
                     break
         
-        print (image_url)
+        # Get the crafting recipe / Used in if it is an item
+        crafting = ""
+        tables = soup.find_all('table')
+        if len(tables) > 0:
+            for i in range(len(tables)):
+                if "craft" in tables[i]['class']:
+                    tablerow = tables[i].find_all('tr')
+                    for j in range(len(tablerow)):
+                        tableData = tablerow[j].find_all('td')
+                        if len(tableData) > 0:
+                            for k in range(len(tableData)):
+                                crafting += tableData[k].get_text() + " "
+                        crafting += "\n"
+
+
+        print (crafting)
 
         text_content = Description
 
