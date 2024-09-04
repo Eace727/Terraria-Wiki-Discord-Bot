@@ -195,12 +195,12 @@ async def search_wiki(interaction: discord.Interaction, search: str):
             "/images/9/9b/Master_Mode.png",
         ]
         
-        image_url = "https://terraria.wiki.gg"
+        image_url = ""
         images = soup.find_all('img')
         if len(images) > 0:
             for i in range(len(images)):
                  if images[i]['src'] not in Versions:
-                    image_url += images[i]['src']
+                    image_url ="https://terraria.wiki.gg" +images[i]['src']
                     break
         
         # Get the crafting recipe / Used in if it is an item
