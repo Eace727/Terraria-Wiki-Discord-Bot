@@ -195,12 +195,12 @@ async def search_wiki(interaction: discord.Interaction, search: str):
             "/images/9/9b/Master_Mode.png",
         ]
         
-        image_url = ""
+        image_url = "https://terraria.wiki.gg"
         images = soup.find_all('img')
         if len(images) > 0:
             for i in range(len(images)):
                  if images[i]['src'] not in Versions:
-                    image_url = images[i]['src']
+                    image_url += images[i]['src']
                     break
         
         # Get the crafting recipe / Used in if it is an item
@@ -226,7 +226,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         if len(text_content) > 2000:
             text_content = text_content[:1800] + "...\nContent too long. Please check the wiki for more details."
     
-        await interaction.followup.send('https://terraria.wiki.gg' + image_url + '\n'+ text_content)
+        await interaction.followup.send(image_url + '\n'+ text_content)
     else:
         await interaction.followup.send("No pages found with that title or no content available.")
 
