@@ -33,17 +33,30 @@ class SelectView(discord.ui.View):
     #create the options
     options =[
         discord.SelectOption(label="Bruh 1", description="Bruh the first"),
+        discord.SelectOption(label="Bruh 2", description="Bruh the second")
     ]
     #Creating the actual button itself
     @discord.ui.select(placeholder="Choose a bruh", options=options)
 
     #Used when an option is selected
-    async def select_callback(self,interaction: discord.Interaction):
-       bruhembed = discord.Embed(
-           title="Hooray!!"
-       )
-       bruhembed.set_image(url="https://tenor.com/view/kevin-gates-rbs-intro-rap-hip-hop-hiphop-gif-12113363228333707274")
-       await interaction.response.send_message(embed=bruhembed)
+    async def select_callback(self,interaction: discord.Interaction,select: discord.ui.Select):
+       selected_option = select.values[0]
+       #Bruh 1 option
+       if selected_option == "Bruh 1":
+           bruhembed = discord.Embed(
+               title="Hooray!!"
+           )
+           bruhembed.set_image(url="https://media2.giphy.com/media/kEQIxNd2i2SSsQ6S2U/giphy.gif?cid=6c09b952fj7qzjk206t24oket0u687i47jxz38s6v8auiotb&ep=v1_internal_gif_by_id&rid=giphy.gif&ct=g")
+           await interaction.response.edit_message(embed=bruhembed)
+        
+       #Bruh 2 option
+       elif selected_option == "Bruh 2":
+           oofembed = discord.Embed(
+               title="Epic"
+           )
+           oofembed.set_image(url="https://gifdb.com/images/thumbnail/ishowspeed-closing-eyes-while-smiling-cgsdgti6o0v4oot7.gif")
+           await interaction.response.edit_message(embed=oofembed)
+
 
 
 
