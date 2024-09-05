@@ -229,7 +229,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         # Get the crafting recipe / Used in if it is an item
         crafting = ""
         if craftingTables:
-            tables = soup.find_all('table')
+            tables = soup.find_all('table', class_="terraria cellborder recipes sortable jquery-tablesorter")
             if len(tables) > 0:
                 for i in range(len(tables)):
                     if Recipes:
@@ -248,8 +248,8 @@ async def search_wiki(interaction: discord.Interaction, search: str):
                             for k in range(len(tableData)):
                                 crafting += tableData[k].get_text() + " "
                             crafting += "\n"
-                            
-        print(statistics)
+
+        print(crafting)
 
         text_content = Description
 
