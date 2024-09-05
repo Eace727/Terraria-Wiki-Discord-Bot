@@ -91,11 +91,9 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         text_content = ""
 
         # Get the first or all paragraphs of the page
+        Description = ""
         paraDiv = soup.find('div', class_="mw-parser-output")
         paragraphs = paraDiv.find_all('p', recursive=False)
-        Description = ""
-        #for p in paragraphs:             #debugging for paragraphs
-        #    print(p.get_text())
         if len(paragraphs) > 0:
             for i in range(len(paragraphs)):
                 if paragraphs[i].get_text() != "": 
@@ -128,46 +126,55 @@ async def search_wiki(interaction: discord.Interaction, search: str):
             "12*" : "Rainbow",
             "13*" : "Fiery Red",
         }
-
+        
         Coin = [
-            ['cc'],
-            ['sc'],
-            ['gc'],
-            ['pc'],
+            "CC",
+            "SC",
+            "GC",
+            "PC",
         ]
 
         CoinDict = {
-            "['cc']" : "Copper Coin(s)",
-            "['sc']" : "Silver Coin(s)",
-            "['gc']" : "Gold Coin(s)",
-            "['pc']" : "Platinum Coin(s)",
+            "CC" : "Copper Coin(s)",
+            "SC" : "Silver Coin(s)",
+            "GC" : "Gold Coin(s)",
+            "PC" : "Platinum Coin(s)",
         }
+
+        VersionDifference = [
+            "(Desktop, Console and Mobile versions) /" ,
+            "(Old-gen console and 3DS versions) ",
+        ]
 
         statistics = ""
         tables = soup.find_all('table', class_="stat")
         if len(tables) > 0:
-                    tablerow = tables[0].find_all('tr')
-                    for j in range(len(tablerow)):
-                        tableHeader = tablerow[j].find_all('th')
-                        tableData = tablerow[j].find_all('td')
-                        if len(tableHeader) > 0 and len(tableData) > 0:
-                            statistics += tableHeader[0].get_text() + ": "  # Table Header
-                            for k in range(len(tableData)):
-                                if tableHeader[0].get_text() == "Type":
-                                    tableDataA = tableData[k].find_all('a')
-                                    for l in range(len(tableDataA)):
-                                        statistics += tableDataA[l].get_text() + " " # Types
-                                elif tableHeader[0].get_text() == "Rarity":
-                                    statistics += Rarity[tableData[k].get_text()] + " "
-                                elif tableHeader[0].get_text() == "Sell":
-                                    tableDataA = tableData[k].find_all('span', class_=Coin)
-                                    for l in range(len(tableDataA)):
-                                            statistics += tableDataA[l].get_text() + " "
-                                else:
-                                    statistics += tableData[k].get_text() + " " # Rest of Table data
-
-
-                        statistics += "\n"
+            tablerow = tables[0].find_all('tr')
+            for j in range(len(tablerow)):
+                tableHeader = tablerow[j].find('th')
+                tableData = tablerow[j].find_all('td')
+                if len(tableHeader) > 0 and len(tableData) > 0:
+                    statistics += tableHeader.get_text() + ": "  # Table Header
+                    for k in range(len(tableData)):
+                        if tableHeader.get_text() == "Type":
+                            tableDataA = tableData[k].find_all('a')
+                            for l in range(len(tableDataA)):
+                                statistics += tableDataA[l].get_text() + " " # Types
+                        elif tableHeader.get_text() == "Rarity":
+                            statistics += Rarity[tableData[k].get_text()] + " "
+                        elif tableHeader.get_text() == "Sell":
+                            tableDataA = tableData[k].find_all('span', class_="coin")
+                            for l in range(len(tableDataA)):
+                                tableDataCoin = tableDataA[l].find_all('span')
+                                for m in range(len(tableDataCoin)):
+                                    coinvalues = tableDataCoin[m].get_text().split() # Sell Price
+                                    for n in range(len(coinvalues)):
+                                        statistics += coinvalues[n] + " " if coinvalues[n] not in Coin else CoinDict[coinvalues[n]] + " "
+                                if len(tableDataA) > 1:
+                                    statistics += VersionDifference[l] + " "
+                        else:
+                            statistics += tableData[k].get_text() + " " # Rest of Table data
+                statistics += "\n"
 
         # Get the image URL
 
@@ -225,26 +232,24 @@ async def search_wiki(interaction: discord.Interaction, search: str):
             tables = soup.find_all('table')
             if len(tables) > 0:
                 for i in range(len(tables)):
-                    if tables[i]['class'] == "terraria cellborder recipes sortable jquery-tablesorter":
-                        if Recipes:
-                            crafting += "Recipe:\n"
-                            tableRow = tables[i].find_all('tr')
-                            for j in range(len(tableRow)):
-                                tableData = tableRow[j].find_all('td')
-                                for k in range(len(tableData)):
-                                    crafting += tableData[k].get_text() + " "
-                                crafting += "\n"
-                        if UsedIn:
-                            crafting += "Used in:\n"
-                            tableRow = tables[i].find_all('tr')
-                            for j in range(len(tableRow)):
-                                tableData = tableRow[j].find_all('td')
-                                for k in range(len(tableData)):
-                                    crafting += tableData[k].get_text() + " "
-                                crafting += "\n"
-
-        print (Recipes)
-        print (UsedIn)
+                    if Recipes:
+                        crafting += "Recipe:\n"
+                        tableRow = tables[i].find_all('tr')
+                        for j in range(len(tableRow)):
+                            tableData = tableRow[j].find_all('td')
+                            for k in range(len(tableData)):
+                                crafting += tableData[k].get_text() + " "
+                            crafting += "\n"
+                    if UsedIn:
+                        crafting += "Used in:\n"
+                        tableRow = tables[i].find_all('tr')
+                        for j in range(len(tableRow)):
+                            tableData = tableRow[j].find_all('td')
+                            for k in range(len(tableData)):
+                                crafting += tableData[k].get_text() + " "
+                            crafting += "\n"
+                            
+        print(statistics)
 
         text_content = Description
 
