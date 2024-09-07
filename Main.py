@@ -227,30 +227,64 @@ async def search_wiki(interaction: discord.Interaction, search: str):
 
 
         # Get the crafting recipe / Used in if it is an item
+
+        VersionNames = [
+            "(only: Desktop, Console and Mobile versions)",
+            "(only: Old-gen console and 3DS versions)",
+        ]
+
+        Recipes1 = True # To get the Recipe only once
         crafting = ""
+        lastItem = ""
         if craftingTables:
-            tables = soup.find_all('table', class_="terraria cellborder recipes sortable jquery-tablesorter")
+            tables = soup.find_all('table', class_="recipes")
             if len(tables) > 0:
                 for i in range(len(tables)):
-                    if Recipes:
+                    if Recipes and Recipes1:
                         crafting += "Recipe:\n"
                         tableRow = tables[i].find_all('tr')
                         for j in range(len(tableRow)):
-                            tableData = tableRow[j].find_all('td')
-                            for k in range(len(tableData)):
-                                crafting += tableData[k].get_text() + " "
-                            crafting += "\n"
-                    if UsedIn:
-                        crafting += "Used in:\n"
-                        tableRow = tables[i].find_all('tr')
-                        for j in range(len(tableRow)):
-                            tableData = tableRow[j].find_all('td')
-                            for k in range(len(tableData)):
-                                crafting += tableData[k].get_text() + " "
-                            crafting += "\n"
+                            oldgen = False
+                            
+                            result = tableRow[j].find('td', class_='result')
+                            if result:
+                                item = result.find('a', class_='mw-selflink selflink')
+                                if not item:
+                                    item = result.find('a', class_='mw-redirect')
+                                if item.get_text() == lastItem:
+                                    oldgen = True
+                                lastItem = item.get_text()
+                            
+                            Ingredients = tableRow[j].find('td', class_="ingredients")
+                            if Ingredients:
+                                crafting += "\n" + item.get_text() + " = "
+                                Items = Ingredients.find_all('li')
+                                for k in range(len(Items)):
+                                    ItemsA = Items[k].find_all('a')
+                                    for l in range(len(ItemsA)):
+                                        crafting += ItemsA[l].get_text()
+                                    Amount = Items[k].find('span', class_='am')
+                                    if Amount:
+                                        crafting += " x" + Amount.get_text()
+                                    if k+1 < len(Items):
+                                        crafting += " + "
+                                if oldgen:
+                                    crafting += " " + VersionNames[1]
+                                    oldgen = False
+                                
+                        Recipes1 = False    
 
-        print(crafting)
+                    #elif UsedIn:
+                    #    crafting += "Used in:\n"
+                    #    tableRow = tables[i].find_all('tr')
+                    #    for j in range(len(tableRow)):
+                    #        tableData = tableRow[j].find_all('td')
+                    #        for k in range(len(tableData)):
+                    #            crafting += tableData[k].get_text() + " "
+                    #        crafting += "\n"
 
+    
+        print (crafting)
         text_content = Description
 
         # Truncate the message if it's too long for Discord
