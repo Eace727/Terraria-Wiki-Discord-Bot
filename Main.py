@@ -270,10 +270,11 @@ async def search_wiki(interaction: discord.Interaction, search: str):
                         crafting += "Recipe:\n"
                         tableRow = tables[i].find_all('tr')
                         for j in range(len(tableRow)):
-                            oldgen = False
+                            
                             
                             result = tableRow[j].find('td', class_='result')
                             if result:
+                                oldgen = False
                                 item = result.find('a', class_='mw-selflink selflink')
                                 if not item:
                                     item = result.find('a', class_='mw-redirect')
