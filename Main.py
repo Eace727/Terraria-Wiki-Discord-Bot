@@ -321,7 +321,6 @@ async def search_wiki(interaction: discord.Interaction, search: str):
 
                             if oldgen:
                                     crafting += " " + VersionNames[1]
-                                    oldgen = False
 
                         crafting += "\n\n"
                         StationString = "" # Reset the StationString since its the only variable in both scopes
