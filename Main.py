@@ -233,9 +233,10 @@ async def search_wiki(interaction: discord.Interaction, search: str):
             "(only: Old-gen console and 3DS versions)",
         ]
 
-        Recipes1 = True # To get the Recipe only once
+        
         crafting = ""
-        lastItem = ""
+        Recipes1 = True # To get the Recipe only once
+        StationString = ""
         if craftingTables:
             tables = soup.find_all('table', class_="recipes")
             if len(tables) > 0:
@@ -251,13 +252,19 @@ async def search_wiki(interaction: discord.Interaction, search: str):
                                 item = result.find('a', class_='mw-selflink selflink')
                                 if not item:
                                     item = result.find('a', class_='mw-redirect')
-                                if item.get_text() == lastItem:
+                                    if not item:
+                                        item = result.find('span', class_='i multi-line').find('span').find('span')
+                                itemVersion = result.find('a', title='Old-gen console version')
+                                if itemVersion:
                                     oldgen = True
-                                lastItem = item.get_text()
+                                resultAmount = result.find('span', class_='am')
                             
                             Ingredients = tableRow[j].find('td', class_="ingredients")
                             if Ingredients:
-                                crafting += "\n" + item.get_text() + " = "
+                                crafting += "\n" + item.get_text() + " "
+                                if resultAmount:
+                                    crafting += "x" + resultAmount.get_text() + " "
+                                crafting += "= "
                                 Items = Ingredients.find_all('li')
                                 for k in range(len(Items)):
                                     ItemsA = Items[k].find_all('a')
@@ -266,26 +273,93 @@ async def search_wiki(interaction: discord.Interaction, search: str):
                                     Amount = Items[k].find('span', class_='am')
                                     if Amount:
                                         crafting += " x" + Amount.get_text()
+                                    else:
+                                        crafting += " x1"
                                     if k+1 < len(Items):
                                         crafting += " + "
-                                if oldgen:
+                            
+                            StationExist = tableRow[j].find('td', class_="station")
+                            if StationExist:
+                                StationString = ""
+                                StationAmount = StationExist.find_all('span', class_='i')
+                                if StationAmount:
+                                    StationString += " at "
+                                    for k in range(len(StationAmount)):
+                                        StationString += StationAmount[k].find('span').get_text()
+                                        if k+1 < len(StationAmount):
+                                            StationString += " or "
+                                    
+                                else: 
+                                    StationString += " " + StationExist.get_text()
+                            crafting += StationString
+
+                            if oldgen:
                                     crafting += " " + VersionNames[1]
                                     oldgen = False
-                                
+
+                        crafting += "\n\n"
+                        StationString = "" # Reset the StationString since its the only variable in both scopes
                         Recipes1 = False    
 
-                    #elif UsedIn:
-                    #    crafting += "Used in:\n"
-                    #    tableRow = tables[i].find_all('tr')
-                    #    for j in range(len(tableRow)):
-                    #        tableData = tableRow[j].find_all('td')
-                    #        for k in range(len(tableData)):
-                    #            crafting += tableData[k].get_text() + " "
-                    #        crafting += "\n"
+                    elif UsedIn:
+                        crafting += "Used in:\n"
+                        tableRow = tables[i].find_all('tr')
+                        for j in range(len(tableRow)):
+                            oldgen = False
+                            
+                            result = tableRow[j].find('td', class_='result')
+                            if result:
+                                item = result.find('a', class_='mw-selflink selflink')
+                                if not item:
+                                    item = result.find('a', class_='mw-redirect')
+                                    if not item:
+                                        item = result.find('span', class_='i multi-line').find('span').find('span')
+                                itemVersion = result.find('a', title='Old-gen console version')
+                                if itemVersion:
+                                    oldgen = True
+                                resultAmount = result.find('span', class_='am')
+                            
+                            Ingredients = tableRow[j].find('td', class_="ingredients")
+                            if Ingredients:
+                                crafting += "\n" + item.get_text() + " "
+                                if resultAmount:
+                                    crafting += "x" + resultAmount.get_text() + " "
+                                crafting += "= "
+                                Items = Ingredients.find_all('li')
+                                for k in range(len(Items)):
+                                    ItemsA = Items[k].find_all('a')
+                                    for l in range(len(ItemsA)):
+                                        crafting += ItemsA[l].get_text()
+                                    Amount = Items[k].find('span', class_='am')
+                                    if Amount:
+                                        crafting += " x" + Amount.get_text()
+                                    else:
+                                        crafting += " x1"
+                                    if k+1 < len(Items):
+                                        crafting += " + "
+                            
+                            StationExist = tableRow[j].find('td', class_="station")
+                            if StationExist:
+                                StationString = ""
+                                StationAmount = StationExist.find_all('span', class_='i')
+                                if StationAmount:
+                                    StationString += " at "
+                                    for k in range(len(StationAmount)):
+                                        StationString += StationAmount[k].find('span').get_text()
+                                        if k+1 < len(StationAmount):
+                                            StationString += " or "
+                                    
+                                else: 
+                                    StationString += " " + StationExist.get_text()
+                            crafting += StationString
+
+                            if oldgen:
+                                    crafting += " " + VersionNames[1]
+                                    oldgen = False
 
     
         print (crafting)
-        text_content = Description
+        text_content = crafting
 
         # Truncate the message if it's too long for Discord
         if len(text_content) > 2000:
