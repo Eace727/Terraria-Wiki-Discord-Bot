@@ -50,7 +50,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         "Status Messages",
         "World Size",
     ]
-
+    
     # Capitalize the first letter of each word in the search term except for "of" and "the"
     search = search.title()
     if search not in ExceptionWords:
@@ -63,10 +63,12 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         search = search.lower()
 
     #print (search)         #debugging for search
+
  
     url = "https://terraria.wiki.gg/api.php"
     params = {
         "action": "parse",
+
         "format": "json",
         "page": search,
         "prop": "text",
@@ -78,12 +80,14 @@ async def search_wiki(interaction: discord.Interaction, search: str):
     # Make a request to the Terraria wiki API
     response = requests.get(url, params=params)
 
+
     # Check if the request was successful
     if response.status_code != 200:
         await interaction.followup.send(f"Error fetching page: {response.status_code}")
 
     # Extract the HTML and Image content
     html_content = response.json().get("parse", {}).get("text", {}).get("*")
+
 
     if not html_content:
 
@@ -391,6 +395,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
             text_content = text_content[:1800] + "...\nContent too long. Please check the wiki for more details."
     
         await interaction.followup.send(image_url + '\n'+ text_content)
+
     else:
         await interaction.followup.send("No pages found with that title or no content available.")
 
