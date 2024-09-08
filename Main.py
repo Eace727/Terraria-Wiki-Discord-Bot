@@ -262,6 +262,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         crafting = ""
         Recipes1 = True # To get the Recipe only once
         StationString = ""
+        oldgen = False
         if craftingTables:
             tables = soup.find_all('table', class_="recipes")
             if len(tables) > 0:
@@ -332,8 +333,8 @@ async def search_wiki(interaction: discord.Interaction, search: str):
                         for j in range(len(tableRow)):
                             
                             result = tableRow[j].find('td', class_='result')
-                            oldgen = False
                             if result:
+                                oldgen = False
                                 item = result.find('a', class_='mw-selflink selflink')
                                 if not item:
                                     item = result.find('a', class_='mw-redirect')
