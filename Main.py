@@ -127,6 +127,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
             "13*" : "Fiery Red",
         }
         
+        # Coin Values
         Coin = [
             "CC",
             "SC",
@@ -134,6 +135,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
             "PC",
         ]
 
+        # Coin Dictionary for Coin Values
         CoinDict = {
             "CC" : "Copper Coin(s)",
             "SC" : "Silver Coin(s)",
