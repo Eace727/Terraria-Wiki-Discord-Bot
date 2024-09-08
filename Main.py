@@ -330,9 +330,9 @@ async def search_wiki(interaction: discord.Interaction, search: str):
                         crafting += "Used in:\n"
                         tableRow = tables[i].find_all('tr')
                         for j in range(len(tableRow)):
-                            oldgen = False
                             
                             result = tableRow[j].find('td', class_='result')
+                            oldgen = False
                             if result:
                                 item = result.find('a', class_='mw-selflink selflink')
                                 if not item:
@@ -380,7 +380,6 @@ async def search_wiki(interaction: discord.Interaction, search: str):
 
                             if oldgen:
                                     crafting += " " + VersionNames[1]
-                                    oldgen = False
 
     
         print (crafting)
