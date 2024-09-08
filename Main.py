@@ -8,6 +8,8 @@ from bs4 import BeautifulSoup
 load_dotenv()
 intents = discord.Intents.default()
 intents.message_content = True
+searchword = ""
+description = ""
 
 client = commands.Bot(command_prefix='!', intents=intents)
 
@@ -20,31 +22,6 @@ async def on_ready():
 @client.tree.command(name="ping", description="Check the bot's latency")
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message("Pong!")
-
-
-class SelectView(discord.ui.View):
-    #calls init from SelectView
-    def __init__(self):
-        #ensures init from discord.ui is also called
-        super().__init__()
-    
-    #Create Options
-    options =[
-        discord.SelectOption(label="Description"),
-        discord.SelectOption(label="Stats")
-    ]
-
-    @discord.ui.select(placeholder="Sections", options=options)
-
-    async def select_callback(self, interaction: discord.Interaction,select: discord.ui.Select):
-        selected_option = select.values[0]
-        #For Description
-        if selected_option =="Description":
-            print("description")
-        #For stats
-        elif selected_option =="Stats":
-            print("stats")
-    
 
 
 
@@ -225,9 +202,40 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         # Truncate the message if it's too long for Discord
         if len(text_content) > 2000:
             text_content = text_content[:1800] + "...\nContent too long. Please check the wiki for more details."
-    
-        await interaction.followup.send(image_url + '\n'+ text_content)
+        descembed = discord.Embed(
+            title = search,
+            description = text_content,
+            color = discord.Color.purple()
+            )
+        await interaction.followup.send(embed = descembed)
     else:
         await interaction.followup.send("No pages found with that title or no content available.")
+
+
+class SelectView(discord.ui.View):
+    #calls init from SelectView
+    def __init__(self):
+        #ensures init from discord.ui is also called
+        super().__init__()
+    
+    #Create Options
+    options =[
+        discord.SelectOption(label="Description"),
+        discord.SelectOption(label="Stats")
+    ]
+
+    @discord.ui.select(placeholder="Sections", options=options)
+
+    async def select_callback(self, interaction: discord.Interaction,select: discord.ui.Select):
+        selected_option = select.values[0]
+        #For Description
+        if selected_option =="Description":
+            descripembed = discord.Embed(
+                title=search
+            )
+            await interaction.response.send(embed=descriptembed))
+        #For stats
+        elif selected_option =="Stats":
+            print("stats")
 
 client.run(os.getenv('TOKEN'))
