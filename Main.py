@@ -85,6 +85,29 @@ async def search_wiki(interaction: discord.Interaction, search: str):
     # Extract the HTML and Image content
     html_content = response.json().get("parse", {}).get("text", {}).get("*")
 
+    if not html_content:
+
+        suggest_params = {
+            'action': 'query',
+            'format': 'json',
+            'list': 'prefixsearch',
+            'pssearch': search,
+            'pslimit': 5  # Limit number of suggestions
+        }
+        
+        suggest_response = requests.get(url, params=suggest_params)
+        suggest_data = suggest_response.json()
+        
+        suggestions = suggest_data.get('query', {}).get('prefixsearch', [])
+
+        if suggestions:
+            for suggestion in suggestions:
+                print(f" - {suggestion['title']}")
+        else:
+            print("No suggestions found.")
+
+
+
     if html_content:
         # Switched from htmlparser to Beautiful soup for better parsing
         soup = BeautifulSoup(html_content, 'html.parser')
