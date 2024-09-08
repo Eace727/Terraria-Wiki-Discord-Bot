@@ -285,7 +285,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
                                 if StationAmount:
                                     StationString += " at "
                                     for k in range(len(StationAmount)):
-                                        StationString += StationAmount[k].find('span').get_text()
+                                        StationString += StationAmount[k].find('span').find('span').get_text()
                                         if k+1 < len(StationAmount):
                                             StationString += " or "
                                     
@@ -345,7 +345,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
                                 if StationAmount:
                                     StationString += " at "
                                     for k in range(len(StationAmount)):
-                                        StationString += StationAmount[k].find('span').get_text()
+                                        StationString += StationAmount[k].find('span').find('span').get_text()
                                         if k+1 < len(StationAmount):
                                             StationString += " or "
                                     
