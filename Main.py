@@ -1,8 +1,9 @@
 import discord
 import os
+import requests
+from typing import Tuple
 from discord.ext import commands
 from dotenv import load_dotenv
-import requests
 from bs4 import BeautifulSoup
 
 # Dictionary for Rarity of Items
@@ -67,7 +68,7 @@ VersionEventMode = [
 # Function to get suggestions from the Terraria wiki
 # params: search (str) - the search term
 # returns: suggestionsResponse (str) - the suggestions from the wiki
-def suggestions(search):
+def suggestions(search: str) -> str:
     url = "https://terraria.wiki.gg/api.php"
     suggest_params = {
             'action': 'query',
@@ -82,19 +83,21 @@ def suggestions(search):
         
     suggestions = suggest_data.get('query', {}).get('prefixsearch', [])
 
+    if not suggestions:
+        return "No suggestions found."
+
+    # Build the suggestion response
     suggestionsResponse = "No Page found. Did you mean:\n"
-    if suggestions:
-        for suggestion in suggestions:
-            suggestionsResponse += " - " + suggestion['title'] + "\n"
-        search_wiki(interaction, suggestions[0]['title'])
-    else:
-        suggestionsResponse = "No suggestions found."
-    return suggestionsResponse
+    for suggestion in suggestions:
+        suggestionsResponse += " - " + suggestion['title'] + "\n"
+
+    # Return the first suggestion (if available)
+    return suggestions[0]['title'] if suggestions else None
 
 # Function to get the description of the page
 # params: soup (BeautifulSoup object) - the BeautifulSoup object
 # returns: Description (str) - the description of the page
-def get_Description(soup):
+def get_Description(soup: BeautifulSoup) -> str:
     Description = ""
     paraDiv = soup.find('div', class_="mw-parser-output")
     paragraphs = paraDiv.find_all('p', recursive=False)
@@ -108,7 +111,7 @@ def get_Description(soup):
 # Function to get the types of the item
 # params: soup (BeautifulSoup object) - the BeautifulSoup object
 # returns: types (str) - the types of the item
-def get_Types(soup):
+def get_Types(soup: BeautifulSoup) -> str:
     types = ""
     tables = soup.find_all('table', class_="stat")
     if len(tables) > 0:
@@ -118,10 +121,10 @@ def get_Types(soup):
     return types
 
 
-# Function to get the statistics of the item
+# Function to get the statistics of the item                                #probably break this up later***********
 # params: soup (BeautifulSoup object) - the BeautifulSoup object
 # returns: statistics (str) - the statistics of the item
-def get_Statistics(soup):
+def get_Statistics(soup: BeautifulSoup) -> str:
     statistics = ""
     tables = soup.find_all('table', class_="stat")
     if len(tables) > 0:
@@ -169,7 +172,7 @@ def get_Image(soup):
 # Function to check if the page has crafting tables
 # params: soup (BeautifulSoup object) - the BeautifulSoup object
 # returns: craftingTables (bool) - True if the page has crafting tables, False otherwise
-def has_CraftingTables(soup):
+def has_CraftingTables(soup: BeautifulSoup) -> bool:
     craftingTables = False
     Headers = soup.find_all('h2')
     for i in range(len(Headers)):
@@ -182,7 +185,7 @@ def has_CraftingTables(soup):
 # Function to check if the page has a Recipe table
 # params: soup (BeautifulSoup object) - the BeautifulSoup object
 # returns: Recipes (bool) - True if the page has a Recipe table, False otherwise
-def has_Recipes(soup):
+def has_Recipes(soup: BeautifulSoup) -> bool:
     Recipes = False
     if has_CraftingTables(soup):
         Headers = soup.find_all('h3')
@@ -196,7 +199,7 @@ def has_Recipes(soup):
 # Function to check if the page has a Used in table
 # params: soup (BeautifulSoup object) - the BeautifulSoup object
 # returns: UsedIn (bool) - True if the page has a Used in table, False otherwise
-def has_UsedIn(soup):
+def has_UsedIn(soup: BeautifulSoup) -> bool:
     UsedIn = False
     if has_CraftingTables(soup):
         Headers = soup.find_all('h3')
@@ -211,11 +214,14 @@ def has_UsedIn(soup):
 # params:
 #         tableRow (BeautifulSoup object) - the table row currently on
 #         oldgen (bool) - True if the item is from Old-gen console version, False otherwise
+#         item (BeautifulSoup object) - the Result item currently on
+#         resultAmount (BeautifulSoup object) - the result amount of the item
 # returns:
-#         item (BeautifulSoup object) - the result item currently on
-#         oldgen (bool) - True if the item is from Old-gen console version, False otherwise
-#         resultAmount (BeautifulSoup object) - the amount of the result item
-def get_Results(tableRow, oldgen, item, resultAmount):
+#         ResultString (str) - the result of the item
+#         oldgen (bool) - updated version of the item
+#         item (BeautifulSoup object) - updated version of the item
+#         resultAmount (BeautifulSoup object) - updated version of the item
+def get_Results(tableRow: BeautifulSoup, oldgen: bool, item: BeautifulSoup, resultAmount: BeautifulSoup) -> Tuple[str, bool, BeautifulSoup, BeautifulSoup]:
     ResultString = ""
     result = tableRow.find('td', class_='result')
 
@@ -244,7 +250,7 @@ def get_Results(tableRow, oldgen, item, resultAmount):
 #         resultAmount (BeautifulSoup object) - the result amount of the item
 # returns: 
 #         IngredientsString (str) - the ingredients of the item
-def get_Ingredients(tableRow):
+def get_Ingredients(tableRow: BeautifulSoup) -> str:
     Ingredients = tableRow.find('td', class_="ingredients")
     IngredientsString = ""
     if Ingredients:
@@ -266,9 +272,10 @@ def get_Ingredients(tableRow):
 # Function to get the crafting station(s)
 # params: tableRow (BeautifulSoup object) - the table row currently on
 # returns: StationString (str) - the crafting station(s) of the item
-def get_Station(tableRow, StationString):
+def get_Station(tableRow: BeautifulSoup, StationString: str) -> str:
     StationExist = tableRow.find('td', class_="station")
     if StationExist:
+        StationString = ""
         StationAmount = StationExist.find_all('span', class_='i')
         if StationAmount:
             StationString += " at "
@@ -278,7 +285,7 @@ def get_Station(tableRow, StationString):
                     StationString += " or "
             
         else: 
-            StationString += " " + StationExist.get_text()
+            StationString = " " + StationExist.get_text()
     return StationString
 
 
@@ -288,7 +295,7 @@ def get_Station(tableRow, StationString):
 #        crafting (str) - the crafting of the item
 # returns:
 #        crafting (str) - updated version of the crafting of the item
-def get_Recipes(tables):
+def get_Recipes(tables: BeautifulSoup) -> str:
     oldgen = False
     item = None
     resultAmount = None
@@ -322,7 +329,7 @@ def get_Recipes(tables):
 #        crafting (str) - the crafting of the item
 # returns:
 #        crafting (str) - updated version of the crafting of the item
-def get_UsedIn(tables):
+def get_UsedIn(tables: BeautifulSoup) -> str:
     oldgen = False
     item = None
     resultAmount = None
@@ -353,7 +360,7 @@ def get_UsedIn(tables):
 # Function to get the crafting tables
 # params: soup (BeautifulSoup object) - the BeautifulSoup object
 # returns: crafting (str) - the crafting of the item
-def get_Crafting(soup):
+def get_Crafting(soup: BeautifulSoup) -> str:
     crafting = ""
     Recipes1 = True # To get the Recipe only once
     craftingTables = has_CraftingTables(soup)
@@ -375,31 +382,11 @@ def get_Crafting(soup):
     return crafting
 
 
-load_dotenv()
-intents = discord.Intents.default()
-intents.message_content = True
-
-client = commands.Bot(command_prefix='!', intents=intents)
-
-@client.event
-async def on_ready():
-    await client.tree.sync()
-    print('We have logged in as {0.user}'.format(client))
-
-# Sends pong to channel when pinged
-@client.tree.command(name="ping", description="Check the bot's latency")
-async def ping(interaction: discord.Interaction):
-    await interaction.response.send_message("Pong!")
-
-# Searches the Terraria wiki for the given search term
-@client.tree.command(name="search", description="Search the Terraria wiki")
-async def search_wiki(interaction: discord.Interaction, search: str):
-    # Defer the response to avoid the 3 second timeout limit on discord
-    await interaction.response.defer()
-
+# Function to format the search term
+# params: search (str) - the search term
+# returns: search (str) - the formatted search term
+def format_Search(search: str):
     # Exception Words that need to be capitalized differently
-    # (make sure to capitalize all words including letters after an apostrophe
-    # eg. "Grox the Great's wings" -> "Grox The Great'S Wings")
     ExceptionWords = [
         "Hand Of Creation",
         "Can Of Worms",
@@ -421,19 +408,28 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         "World Size",
     ]
 
-    # Capitalize the first letter of each word in the search term except for "of" and "the"
+    # Capitalize the first letter of each word in the search term except for "of", "the", and "'s"
     search = search.title()
     if search not in ExceptionWords:
-        search = search.replace("Of", "of")
-        search = search.replace("The", "the")
-        search = search.replace("'S", "'s")
+        search = search.replace("Of", "of").replace("The", "the").replace("'S", "'s")
 
-    # lowercase the second word if it is in the Mechanics list
+    # Lowercase the second word if it is in the Mechanics list
     if search in LowercaseWords:
         search = search.lower()
 
-    #print (search)         #debugging for search
- 
+    # Replace spaces with underscores
+    search = search.replace(" ", "_")
+
+    return search
+
+
+# Function to fetch the Terraria wiki page
+# params:
+#        interaction (discord.Interaction) - the Discord interaction
+#        search (str) - the search term
+# returns:
+#        html_content (str) - the HTML content of the page
+async def fetch_Terraria_Page(interaction: discord.Interaction, search: str):
     url = "https://terraria.wiki.gg/api.php"
     params = {
         "action": "parse",
@@ -443,43 +439,89 @@ async def search_wiki(interaction: discord.Interaction, search: str):
         "redirects": "true",
     }
 
-    search = search.replace(" ", "_")
-
     # Make a request to the Terraria wiki API
     response = requests.get(url, params=params)
 
     # Check if the request was successful
     if response.status_code != 200:
         await interaction.followup.send(f"Error fetching page: {response.status_code}")
+        return
 
-    # Extract the HTML and Image content
+    # Extract the HTML
     html_content = response.json().get("parse", {}).get("text", {}).get("*")
 
+    return html_content
+
+
+# Function to perform the search
+# params:
+#        interaction (discord.Interaction) - the Discord interaction
+#        search (str) - the search term
+async def perform_search(interaction: discord.Interaction, search: str):
+    # Format the search term
+    search = format_Search(search)
+
+    # Make a request to the Terraria wiki API
+    html_content = await fetch_Terraria_Page(interaction, search)
 
     if not html_content:
-        await interaction.followup.send(suggestions(search))
-    else:
-        # Switched from htmlparser to Beautiful soup for better parsing
-        soup = BeautifulSoup(html_content, 'html.parser')
-        text_content = ""
-        
-        Description = get_Description(soup)
-        Types = get_Types(soup)
-        Statistics = get_Statistics(soup)
-        image_url = get_Image(soup)
-        CraftingTables = has_CraftingTables(soup)
-        Recipes = has_Recipes(soup)
-        UsedIn = has_UsedIn(soup)
-        crafting = get_Crafting(soup)
+        # If no page is found, get suggestions
+        suggested_page = suggestions(search)
+        if suggested_page:
+            # If there's a suggestion, perform the search with the first suggestion
+            await perform_search(interaction, suggested_page)
+        else:
+            await interaction.followup.send("No suggestions found.")
+        return
 
-        
-        text_content = crafting
-        print (text_content)
+    # Switched from htmlparser to BeautifulSoup for better parsing
+    soup = BeautifulSoup(html_content, 'html.parser')
 
-        # Truncate the message if it's too long for Discord
-        if len(text_content) > 2000:
-            text_content = text_content[:1800] + "...\nContent too long. Please check the wiki for more details."
+    # Retrieve different sections of the wiki page # Currently for Debugging
+    Description = get_Description(soup)
+    Types = get_Types(soup)
+    Statistics = get_Statistics(soup)
+    image_url = get_Image(soup)
+    CraftingTables = has_CraftingTables(soup)
+    Recipes = has_Recipes(soup)
+    UsedIn = has_UsedIn(soup)
+    crafting = get_Crafting(soup)
+
+    # Prepare the content to send
+    text_content = crafting
+    print(text_content)
+
+    # Truncate the message if it's too long for Discord
+    if len(text_content) > 2000:
+        text_content = text_content[:1800] + "...\nContent too long. Please check the wiki for more details."
     
-        await interaction.followup.send(image_url + '\n'+ text_content)
+    # Send the image and content to the Discord interaction
+    await interaction.followup.send(image_url + '\n' + text_content)
+
+
+load_dotenv()
+intents = discord.Intents.default()
+intents.message_content = True
+
+client = commands.Bot(command_prefix='!', intents=intents)
+
+@client.event
+async def on_ready():
+    await client.tree.sync()
+    print('We have logged in as {0.user}'.format(client))
+
+# Sends pong to channel when pinged
+@client.tree.command(name="ping", description="Check the bot's latency")
+async def ping(interaction: discord.Interaction):
+    await interaction.response.send_message("Pong!")
+
+# Searches the Terraria wiki for the given search term
+@client.tree.command(name="search", description="Search the Terraria wiki")
+async def search_wiki(interaction: discord.Interaction, search: str):
+    # Defer the response to avoid the 3-second timeout limit on Discord
+    await interaction.response.defer()
+    
+    # Perform the search using the helper function
+    await perform_search(interaction, search)
 
 client.run(os.getenv('TOKEN'))
