@@ -66,7 +66,7 @@ VersionEventMode = [
 
 # Function to get suggestions from the Terraria wiki
 # params: search (str) - the search term
-# returns: None
+# returns: suggestionsResponse (str) - the suggestions from the wiki
 def suggestions(search):
     url = "https://terraria.wiki.gg/api.php"
     suggest_params = {
@@ -82,12 +82,14 @@ def suggestions(search):
         
     suggestions = suggest_data.get('query', {}).get('prefixsearch', [])
 
+    suggestionsResponse = "No Page found. Did you mean:\n"
     if suggestions:
         for suggestion in suggestions:
-            print(f" - {suggestion['title']}")
+            suggestionsResponse += " - " + suggestion['title'] + "\n"
+        search_wiki(interaction, suggestions[0]['title'])
     else:
-        print("No suggestions found.")
-
+        suggestionsResponse = "No suggestions found."
+    return suggestionsResponse
 
 # Function to get the description of the page
 # params: soup (BeautifulSoup object) - the BeautifulSoup object
@@ -455,7 +457,7 @@ async def search_wiki(interaction: discord.Interaction, search: str):
 
 
     if not html_content:
-        suggestions(search)
+        await interaction.followup.send(suggestions(search))
     else:
         # Switched from htmlparser to Beautiful soup for better parsing
         soup = BeautifulSoup(html_content, 'html.parser')
