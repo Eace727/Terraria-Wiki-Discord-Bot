@@ -6,22 +6,32 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 
+# Global Variables
+
 # Dictionary for Rarity of Items
 Rarity = {
-    "-1*" : "Gray",
-    "00*" : "White",
-    "01*" : "Blue",
-    "02*" : "Green",
-    "03*" : "Orange",
-    "04*" : "Light Red",
-    "05*" : "Pink",
-    "06*" : "Light Purple",
-    "07*" : "Lime",
-    "08*" : "Yellow",
-    "09*" : "Cyan",
-    "10*" : "Red",  
-    "12*" : "Rainbow",
-    "13*" : "Fiery Red",
+    "Rarity level: -1" : "Gray",
+    "Rarity level: 0" : "White",
+    "Rarity level: 1" : "Blue",
+    "Rarity level: 2" : "Green",
+    "Rarity level: 3" : "Orange",
+    "Rarity level: 4" : "Light Red",
+    "Rarity level: 5" : "Pink",
+    "Rarity level: 6" : "Light Purple",
+    "Rarity level: 7" : "Lime",
+    "Rarity level: 8" : "Yellow",
+    "Rarity level: 9" : "Cyan",
+    "Rarity level: 10" : "Red",
+    "Rarity level: 11" : "Purple",  
+    "Rarity level: Rainbow" : "Rainbow",
+    "Rarity level: Fiery red" : "Fiery Red",
+    "Rarity Level: 12" : "Turquoise",
+    "Rarity Level: 13" : "Pure Green",
+    "Rarity Level: 14" : "Dark Blue",
+    "Rarity Level: 15" : "Violet",
+    "Rarity Level: 16" : "Hot Pink",
+    "Rarity Level: 17" : "Calamity Red",
+    "Rarity Level: Draedon's Arsenal" : "Dark Orange",
 }
 
 # Coin Values for Sell Price
@@ -138,10 +148,12 @@ def get_Statistics(soup: BeautifulSoup) -> str:
                     if tableHeader.get_text() == "Type":
                         tableDataA = tableData[k].find_all('a')
                         for l in range(len(tableDataA)):
-                            statistics += tableDataA[l].get_text() + " " # Types
+                            statistics += tableDataA[l].get_text() # Types
+                            if l+1 < len(tableDataA):
+                                statistics += " / "
                     elif tableHeader.get_text() == "Rarity":
-                        statistics += Rarity[tableData[k].get_text()] + " "
-                    elif tableHeader.get_text() == "Sell":
+                        tableDataA = tableData[k].find('a')
+                        statistics += Rarity[tableDataA['title']] + " " # Rarity
                         tableDataA = tableData[k].find_all('span', class_="coin")
                         for l in range(len(tableDataA)):
                             tableDataCoin = tableDataA[l].find_all('span')
@@ -151,9 +163,15 @@ def get_Statistics(soup: BeautifulSoup) -> str:
                                     statistics += coinvalues[n] + " " if coinvalues[n] not in Coin else CoinDict[coinvalues[n]] + " "
                             if len(tableDataA) > 1:
                                 statistics += VersionDifference[l] + " "
+                    elif tableHeader.get_text() == "Tooltip":
+                        tableDataA = tableData[k].find('i').find('span')
+                        for br in tableDataA.find_all('br'):
+                            br.replace_with(' / ')
+                        statistics += tableDataA.get_text()  # Tooltip
                     else:
                         statistics += tableData[k].get_text() + " " # Rest of Table data
             statistics += "\n"
+            statistics = statistics.replace("✔️", "✅")         
     return statistics
 
 
@@ -164,7 +182,7 @@ def get_Image(soup):
     if len(images) > 0:
         for i in range(len(images)):
             if images[i]['src'] not in VersionEventMode:
-                image_url = "https://terraria.wiki.gg" + images[i]['src']
+                image_url = "https://terraria.wiki.gg" + images[i]['src'] # remember to switch this depending on the wiki
             break
     return image_url
 
@@ -488,7 +506,7 @@ async def perform_search(interaction: discord.Interaction, search: str):
     crafting = get_Crafting(soup)
 
     # Prepare the content to send
-    text_content = crafting
+    text_content = Statistics
     print(text_content)
 
     # Truncate the message if it's too long for Discord
