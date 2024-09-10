@@ -567,20 +567,17 @@ class SelectView(discord.ui.View):
         super().__init__()
     
     
-    #Create Options List
-    def create_options(self):
-        options =[
-            discord.SelectOption(label="Description"),
-            discord.SelectOption(label="Stats"),
-            discord.SelectOption(label="Obtained From"),
-            discord.SelectOption(label="Crafting")
-        ]
-        if (has_Recipes(self.soup) == True):
-            options.append(discord.SelectOption(label="Recipes"))
-        if (has_UsedIn(self.soup) == True):
-            options.append(discord.SelectOption(label="Used In"))
-        return options
-    options = create_options(self)
+
+    options =[
+        discord.SelectOption(label="Description"),
+        discord.SelectOption(label="Stats"),
+        discord.SelectOption(label="Obtained From"),
+        discord.SelectOption(label="Crafting")
+    ]
+    if (has_Recipes(self.soup) == True):
+        options.append(discord.SelectOption(label="Recipes"))
+    if (has_UsedIn(self.soup) == True):
+        options.append(discord.SelectOption(label="Used In"))
     #Make the actual drop down menu
     @discord.ui.select(placeholder="Sections", options=options)
 
