@@ -467,9 +467,9 @@ def format_Search(search: str):
         search = search.lower()
 
     # Replace spaces with underscores
-    search = search.replace(" ", "_")
+    searchForUrl = search.replace(" ", "_")
 
-    return search
+    return search, searchForUrl
 
 
 # Function to fetch the Terraria wiki page
@@ -508,7 +508,7 @@ async def fetch_Terraria_Page(interaction: discord.Interaction, search: str):
 #        search (str) - the search term
 async def perform_search(interaction: discord.Interaction, search: str):
     # Format the search term
-    search = format_Search(search)
+    search, searchForUrl = format_Search(search)
 
     # Make a request to the Terraria wiki API
     html_content = await fetch_Terraria_Page(interaction, search)
