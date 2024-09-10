@@ -566,16 +566,21 @@ class SelectView(discord.ui.View):
         #ensures init from discord.ui is also called
         super().__init__()
     
+    
     #Create Options List
-    options =[
-        discord.SelectOption(label="Description"),
-        discord.SelectOption(label="Stats"),
-        discord.SelectOption(label="Crafting"),
-        discord.SelectOption(label="Obtained From"),
-        discord.SelectOption(label="Used In"),
-        discord.SelectOption(label="Recipes")
-    ]
-
+    def create_options(self):
+        options =[
+            discord.SelectOption(label="Description"),
+            discord.SelectOption(label="Stats"),
+            discord.SelectOption(label="Obtained From"),
+            discord.SelectOption(label="Crafting")
+        ]
+        if (has_Recipes(self.soup) == True):
+            options.append(discord.SelectOption(label="Recipes"))
+        if (has_UsedIn(self.soup) == True):
+            options.append(discord.SelectOption(label="Used In"))
+        return options
+    options = create_options(self)
     #Make the actual drop down menu
     @discord.ui.select(placeholder="Sections", options=options)
 
@@ -602,7 +607,46 @@ class SelectView(discord.ui.View):
             )
             embed.set_thumbnail(url=get_Image(self.soup))
             await interaction.response.edit_message(embed=embed, view=SelectView(self.search, self.searchForUrl, self.soup))
-
+        #For Crafting
+        elif selected_option =="Crafting":
+            embed = discord.Embed(
+                title= self.search,
+                url="https://terraria.wiki.gg/" + self.searchForUrl,
+                description = get_Crafting(self.soup),
+                color = discord.Color.blue()
+            )
+            embed.set_thumbnail(url=get_Image(self.soup))
+            await interaction.response.edit_message(embed=embed, view=SelectView(self.search, self.searchForUrl, self.soup))
+        #For Obtained From
+        elif selected_option == "Obtained From":
+            embed = discord.Embed(
+                title= self.search,
+                url="https://terraria.wiki.gg/" + self.searchForUrl,
+                description = get_ObtainedFrom(self.soup),
+                color = discord.Color.red()
+            )
+            embed.set_thumbnail(url=get_Image(self.soup))
+            await interaction.response.edit_message(embed=embed, view=SelectView(self.search, self.searchForUrl, self.soup))
+        #For Used In
+        elif selected_option == "Used In":
+            embed = discord.Embed(
+                title= self.search,
+                url="https://terraria.wiki.gg/" + self.searchForUrl,
+                description = get_UsedIn(self.soup),
+                color = discord.Color.orange()
+            )
+            embed.set_thumbnail(url=get_Image(self.soup))
+            await interaction.response.edit_message(embed=embed, view=SelectView(self.search, self.searchForUrl, self.soup))
+        #For Recipes
+        elif selected_option == "Recipes":
+            embed = discord.Embed(
+                title= self.search,
+                url="https://terraria.wiki.gg/" + self.searchForUrl,
+                description = get_Recipes(self.soup),
+                color = discord.Color.gold()
+            )
+            embed.set_thumbnail(url=get_Image(self.soup))
+            await interaction.response.edit_message(embed=embed, view=SelectView(self.search, self.searchForUrl, self.soup))
 
 load_dotenv()
 intents = discord.Intents.default()
