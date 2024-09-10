@@ -154,6 +154,7 @@ def get_Statistics(soup: BeautifulSoup) -> str:
                     elif tableHeader.get_text() == "Rarity":
                         tableDataA = tableData[k].find('a')
                         statistics += Rarity[tableDataA['title']] + " " # Rarity
+                    elif tableHeader.get_text() == "Sell":
                         tableDataA = tableData[k].find_all('span', class_="coin")
                         for l in range(len(tableDataA)):
                             tableDataCoin = tableDataA[l].find_all('span')
