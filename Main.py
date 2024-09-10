@@ -154,6 +154,7 @@ def get_Statistics(soup: BeautifulSoup) -> str:
                     elif tableHeader.get_text() == "Rarity":
                         tableDataA = tableData[k].find('a')
                         statistics += Rarity[tableDataA['title']] + " " # Rarity
+                    elif tableHeader.get_text() == "Sell":
                         tableDataA = tableData[k].find_all('span', class_="coin")
                         for l in range(len(tableDataA)):
                             tableDataCoin = tableDataA[l].find_all('span')
@@ -467,9 +468,9 @@ def format_Search(search: str):
         search = search.lower()
 
     # Replace spaces with underscores
-    search = search.replace(" ", "_")
+    searchForUrl = search.replace(" ", "_")
 
-    return search
+    return search, searchForUrl
 
 
 # Function to fetch the Terraria wiki page
@@ -508,7 +509,7 @@ async def fetch_Terraria_Page(interaction: discord.Interaction, search: str):
 #        search (str) - the search term
 async def perform_search(interaction: discord.Interaction, search: str):
     # Format the search term
-    search = format_Search(search)
+    search, searchForUrl = format_Search(search)
 
     # Make a request to the Terraria wiki API
     html_content = await fetch_Terraria_Page(interaction, search)
@@ -538,15 +539,69 @@ async def perform_search(interaction: discord.Interaction, search: str):
     obtainedFrom = get_ObtainedFrom(soup)
 
     # Prepare the content to send
-    text_content = Statistics
-    print(text_content)
+    text_content = Description
 
     # Truncate the message if it's too long for Discord
     if len(text_content) > 2000:
         text_content = text_content[:1800] + "...\nContent too long. Please check the wiki for more details."
     
-    # Send the image and content to the Discord interaction
-    await interaction.followup.send(image_url + '\n' + text_content)
+    embed = discord.Embed(
+            title = search, 
+            url="https://terraria.wiki.gg/" + searchForUrl,
+            description = text_content,
+            color = discord.Color.purple()
+             )
+    embed.set_thumbnail(url=image_url)
+    view = SelectView(search, searchForUrl, soup)
+    await interaction.followup.send(embed = embed, view = view)
+
+
+#Select Menu For Drop Down Menu
+class SelectView(discord.ui.View):
+    #calls init from SelectView
+    def __init__(self,search: str, searchForUrl: str, soup: BeautifulSoup):
+        self.search = search
+        self.searchForUrl = searchForUrl
+        self.soup = soup
+        #ensures init from discord.ui is also called
+        super().__init__()
+    
+    #Create Options List
+    options =[
+        discord.SelectOption(label="Description"),
+        discord.SelectOption(label="Stats"),
+        discord.SelectOption(label="Crafting"),
+        discord.SelectOption(label="Obtained From"),
+        discord.SelectOption(label="Used In"),
+        discord.SelectOption(label="Recipes")
+    ]
+
+    #Make the actual drop down menu
+    @discord.ui.select(placeholder="Sections", options=options)
+
+    #What the Menu Does when an Option is Selected
+    async def select_callback(self, interaction: discord.Interaction,select: discord.ui.Select):
+        selected_option = select.values[0]
+        #For Description
+        if selected_option =="Description":
+            embed = discord.Embed(
+                        title = self.search, 
+                        url="https://terraria.wiki.gg/" + self.searchForUrl,
+                        description = get_Description(self.soup),
+                        color = discord.Color.purple()
+             )
+            embed.set_thumbnail(url=get_Image(self.soup))
+            await interaction.response.edit_message(embed=embed, view=SelectView(self.search, self.searchForUrl, self.soup))
+        #For stats
+        elif selected_option =="Stats":
+            embed = discord.Embed(
+                title= self.search,
+                url="https://terraria.wiki.gg/" + self.searchForUrl,
+                description = get_Statistics(self.soup),
+                color = discord.Color.green()
+            )
+            embed.set_thumbnail(url=get_Image(self.soup))
+            await interaction.response.edit_message(embed=embed, view=SelectView(self.search, self.searchForUrl, self.soup))
 
 
 load_dotenv()
