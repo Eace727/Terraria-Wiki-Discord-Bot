@@ -400,6 +400,37 @@ def get_Crafting(soup: BeautifulSoup) -> str:
     return crafting
 
 
+# Function to get the Obtained From table
+def get_ObtainedFrom(soup: BeautifulSoup) -> str:
+    obtainedFrom = ""
+    tables = soup.find_all('table', class_="obtainedfrom")
+    if len(tables) > 0:
+        for i in range(len(tables)):
+            tableRow = tables[i].find_all('tr')
+            for j in range(len(tableRow)):
+                tableHeader = tableRow[j].find('th')
+                tableData = tableRow[j].find_all('td')
+                if len(tableHeader) > 0 and len(tableData) > 0:
+                    obtainedFrom += tableHeader.get_text() + ": "  # Table Header
+                    for k in range(len(tableData)):
+                        if tableHeader.get_text() == "Dropped by":
+                            tableDataA = tableData[k].find_all('a')
+                            for l in range(len(tableDataA)):
+                                obtainedFrom += tableDataA[l].get_text() # Dropped by
+                                if l+1 < len(tableDataA):
+                                    obtainedFrom += " / "
+                        elif tableHeader.get_text() == "Found in":
+                            tableDataA = tableData[k].find_all('a')
+                            for l in range(len(tableDataA)):
+                                obtainedFrom += tableDataA[l].get_text() # Found in
+                                if l+1 < len(tableDataA):
+                                    obtainedFrom += " / "
+                        else:
+                            obtainedFrom += tableData[k].get_text() + " " # Rest of Table data
+                    obtainedFrom += "\n"
+    return obtainedFrom
+
+
 # Function to format the search term
 # params: search (str) - the search term
 # returns: search (str) - the formatted search term
@@ -504,6 +535,7 @@ async def perform_search(interaction: discord.Interaction, search: str):
     Recipes = has_Recipes(soup)
     UsedIn = has_UsedIn(soup)
     crafting = get_Crafting(soup)
+    obtainedFrom = get_ObtainedFrom(soup)
 
     # Prepare the content to send
     text_content = Statistics
