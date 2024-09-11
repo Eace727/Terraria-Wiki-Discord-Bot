@@ -93,14 +93,6 @@ def suggestions(search: str) -> str:
         
     suggestions = suggest_data.get('query', {}).get('prefixsearch', [])
 
-    if not suggestions:
-        return "No suggestions found."
-
-    # Build the suggestion response
-    suggestionsResponse = "No Page found. Did you mean:\n"
-    for suggestion in suggestions:
-        suggestionsResponse += " - " + suggestion['title'] + "\n"
-
     # Return the first suggestion (if available)
     return suggestions[0]['title'] if suggestions else None
 
@@ -110,11 +102,28 @@ def suggestions(search: str) -> str:
 def get_Description(soup: BeautifulSoup) -> str:
     Description = ""
     paraDiv = soup.find('div', class_="mw-parser-output")
-    paragraphs = paraDiv.find_all('p', recursive=False)
-    if len(paragraphs) > 0:
-        for i in range(len(paragraphs)):
-            if paragraphs[i].get_text() != "": 
-                Description += paragraphs[i].get_text() + "\n"
+    flavorText = paraDiv.find('div', class_="flavor-text")
+    if flavorText:
+        Description +=flavorText.get_text().replace(" ", "***") + "\n\n"
+    hatNote = paraDiv.find('div', class_="hat-note")
+    if hatNote:
+        Description += "*" + hatNote.get_text() + "*\n\n"
+    for child in paraDiv.children:
+        if child.name == 'p' and child.get_text() != "":
+            if child.find_all('audio'):
+                for audio in child.find_all('audio'):
+                    audio.decompose()
+            if child.find_all('sup'):
+                for sup in child.find_all('sup'):
+                    sup.decompose()
+            Description += child.get_text() + "\n"
+        if child.name == 'ul':
+            for li in child.find_all('li'):
+                if li.find('audio'):
+                    li.find('audio').decompose()
+                Description += "- " + li.get_text() + "\n"
+        if child.next_sibling and child.next_sibling.name == 'h2':
+            break
     return Description
 
 
@@ -131,12 +140,24 @@ def get_Types(soup: BeautifulSoup) -> str:
     return types
 
 
-# Function to get the statistics of the item                                #probably break this up later***********
-# params: soup (BeautifulSoup object) - the BeautifulSoup object
-# returns: statistics (str) - the statistics of the item
-def get_Statistics(soup: BeautifulSoup) -> str:
+# Function to get the statistics of the item
+# params:
+#         soup (BeautifulSoup object) - the BeautifulSoup object
+#         search (str) - the search term
+# returns: 
+#         statistics (str) - the statistics of the item
+def get_Statistics(soup: BeautifulSoup, search: str) -> str:
     statistics = ""
-    tables = soup.find_all('table', class_="stat")
+    tables = None
+    infobox = soup.find_all('div', class_="infobox item")
+    for info in infobox:
+        if info.find('div', class_="title"):
+            if search == info.find('div', class_="title").get_text():
+                tables = info.find_all('table', class_="stat")
+                break
+    if not tables:
+        tables = soup.find_all('table', class_="stat")
+
     if len(tables) > 0:
         tablerow = tables[0].find_all('tr')
         for j in range(len(tablerow)):
@@ -145,46 +166,57 @@ def get_Statistics(soup: BeautifulSoup) -> str:
             if len(tableHeader) > 0 and len(tableData) > 0:
                 statistics += tableHeader.get_text() + ": "  # Table Header
                 for k in range(len(tableData)):
-                    if tableHeader.get_text() == "Type":
+                    if tableHeader.get_text() == "Type":    # Types
                         tableDataA = tableData[k].find_all('a')
                         for l in range(len(tableDataA)):
-                            statistics += tableDataA[l].get_text() # Types
+                            statistics += tableDataA[l].get_text() 
                             if l+1 < len(tableDataA):
                                 statistics += " / "
-                    elif tableHeader.get_text() == "Rarity":
+                    elif tableHeader.get_text() == "Rarity":    # Rarity
                         tableDataA = tableData[k].find('a')
-                        statistics += Rarity[tableDataA['title']] + " " # Rarity
-                    elif tableHeader.get_text() == "Sell":
+                        statistics += Rarity[tableDataA['title']] + " " 
+                    elif tableHeader.get_text() == "Sell":   # Sell Price
                         tableDataA = tableData[k].find_all('span', class_="coin")
                         for l in range(len(tableDataA)):
                             tableDataCoin = tableDataA[l].find_all('span')
                             for m in range(len(tableDataCoin)):
-                                coinvalues = tableDataCoin[m].get_text().split() # Sell Price
+                                coinvalues = tableDataCoin[m].get_text().split()
                                 for n in range(len(coinvalues)):
                                     statistics += coinvalues[n] + " " if coinvalues[n] not in Coin else CoinDict[coinvalues[n]] + " "
                             if len(tableDataA) > 1:
                                 statistics += VersionDifference[l] + " "
-                    elif tableHeader.get_text() == "Tooltip":
+                    elif tableHeader.get_text() == "Tooltip":   # Tooltip
                         tableDataA = tableData[k].find('i').find('span')
                         for br in tableDataA.find_all('br'):
                             br.replace_with(' / ')
-                        statistics += tableDataA.get_text()  # Tooltip
+                        statistics += tableDataA.get_text()  
                     else:
                         statistics += tableData[k].get_text() + " " # Rest of Table data
             statistics += "\n"
-            statistics = statistics.replace("✔️", "✅")         
+            statistics = statistics.replace("✔️", "✅") # Replace checkmark for better visibility on discord
     return statistics
 
 
-# Fix/Improve Function to get the image of the item****************************
-def get_Image(soup):
+# Function to get the image of the item or the first image on the page if the item image is not found
+# params: 
+#         soup (BeautifulSoup object) - the BeautifulSoup object
+#         search (str) - the search term
+# returns: 
+#         image_url (str) - the image URL of the item
+def get_Image(soup: BeautifulSoup, search: str) -> str:
     image_url = ""
-    images = soup.find_all('img')
-    if len(images) > 0:
-        for i in range(len(images)):
-            if images[i]['src'] not in VersionEventMode:
-                image_url = "https://terraria.wiki.gg" + images[i]['src'] # remember to switch this depending on the wiki
+    images = soup.find_all('div', class_="section images")
+    for image in images:
+        itemImage = image.find('img', alt=search + " item sprite")
+        if itemImage:
+            image_url = "https://terraria.wiki.gg" + itemImage['src']
             break
+    if image_url == "":
+        allImages = soup.find_all('img')
+        for img in allImages:
+            if img['src'] not in VersionEventMode:
+                image_url = "https://terraria.wiki.gg" + img['src']
+                break
     return image_url
 
 
@@ -517,11 +549,11 @@ async def perform_search(interaction: discord.Interaction, search: str):
     if not html_content:
         # If no page is found, get suggestions
         suggested_page = suggestions(search)
-        if suggested_page:
+        if suggested_page and suggested_page != search:
             # If there's a suggestion, perform the search with the first suggestion
             await perform_search(interaction, suggested_page)
         else:
-            await interaction.followup.send("No suggestions found.")
+            await interaction.followup.send('No page found named: "' + search + '".\nPlease check the spelling and try again.')
         return
 
     # Switched from htmlparser to BeautifulSoup for better parsing
@@ -530,8 +562,8 @@ async def perform_search(interaction: discord.Interaction, search: str):
     # Retrieve different sections of the wiki page # Currently for Debugging
     Description = get_Description(soup)
     Types = get_Types(soup)
-    Statistics = get_Statistics(soup)
-    image_url = get_Image(soup)
+    Statistics = get_Statistics(soup, search)
+    image_url = get_Image(soup, search)
     CraftingTables = has_CraftingTables(soup)
     Recipes = has_Recipes(soup)
     UsedIn = has_UsedIn(soup)
@@ -540,7 +572,7 @@ async def perform_search(interaction: discord.Interaction, search: str):
 
     # Prepare the content to send
     text_content = Statistics
-    print(text_content)
+    #print(text_content)
 
     # Truncate the message if it's too long for Discord
     if len(text_content) > 2000:
