@@ -92,7 +92,7 @@ def suggestions(search: str) -> str:
     suggest_data = suggest_response.json()
         
     suggestions = suggest_data.get('query', {}).get('prefixsearch', [])
-
+    print(suggestions[0]['title'])
     # Return the first suggestion (if available)
     return suggestions[0]['title'] if suggestions else None
 
@@ -282,7 +282,11 @@ def get_Results(tableRow: BeautifulSoup, oldgen: bool, item: BeautifulSoup, resu
         if not item:
             item = result.find('a', class_='mw-redirect')
             if not item:
-                item = result.find('span', class_='i multi-line').find('span').find('span')
+                item = result.find('span', class_='i')
+                if not item:
+                    item = result.find('span', class_='i multi-line').find('span').find('span')
+        for id in result.find_all('span', class_='id'):
+            id.decompose()
         itemVersion = result.find('a', title='Old-gen console version')
         if itemVersion:
             oldgen = True
@@ -436,31 +440,37 @@ def get_Crafting(soup: BeautifulSoup) -> str:
 # Function to get the Obtained From table
 def get_ObtainedFrom(soup: BeautifulSoup) -> str:
     obtainedFrom = ""
-    tables = soup.find_all('table', class_="obtainedfrom")
-    if len(tables) > 0:
-        for i in range(len(tables)):
-            tableRow = tables[i].find_all('tr')
-            for j in range(len(tableRow)):
-                tableHeader = tableRow[j].find('th')
-                tableData = tableRow[j].find_all('td')
-                if len(tableHeader) > 0 and len(tableData) > 0:
-                    obtainedFrom += tableHeader.get_text() + ": "  # Table Header
-                    for k in range(len(tableData)):
-                        if tableHeader.get_text() == "Dropped by":
-                            tableDataA = tableData[k].find_all('a')
-                            for l in range(len(tableDataA)):
-                                obtainedFrom += tableDataA[l].get_text() # Dropped by
-                                if l+1 < len(tableDataA):
+    dropMenu = soup.find('div', class_="drop")
+    if dropMenu:
+        table = dropMenu.find('table')
+        if table:
+            tableRow = table.find_all('tr')
+            for i in range(len(tableRow)):
+                tableData = tableRow[i].find_all('td')
+                if tableData:
+                    if tableData[0].find('span', title="Desktop, Console and Mobile versions"):
+                        tableData[0].find('span', title="Desktop, Console and Mobile versions").decompose()
+                    if tableData[0].find('span', class_="eico"):
+                        tableData[0].find('span', class_="eico").decompose()
+                    obtainedFrom += tableData[0].find('span', class_="eil").get_text() + " - "
+                    if tableData[0].find('div', class_="note-text"):
+                        obtainedFrom += tableData[0].find('div', class_="note-text").get_text() + " "
+                    elif tableData[0].find('span', class_="note-text"):
+                        obtainedFrom += tableData[0].find('span', class_="note-text").get_text() + " "
+                    if tableData[1]:
+                        obtainedFrom += tableData[1].get_text() + " - "
+                    if tableData[2]:
+                        if tableData[2].find('span', class_="mode-content"):
+                            dropChance = tableData[2].find('span', class_="mode-content").find_all('span')
+                            for j in range(len(dropChance)):
+                                obtainedFrom += dropChance[j].get_text()
+                                if j+1 < len(dropChance):
                                     obtainedFrom += " / "
-                        elif tableHeader.get_text() == "Found in":
-                            tableDataA = tableData[k].find_all('a')
-                            for l in range(len(tableDataA)):
-                                obtainedFrom += tableDataA[l].get_text() # Found in
-                                if l+1 < len(tableDataA):
-                                    obtainedFrom += " / "
+                        elif tableRow[i].find('span', class_="m-normal") or tableRow[i].find('span', class_="m-expert-master"):
+                            obtainedFrom += tableData[2].get_text() + " / 0%" if tableRow[i].find('span', class_="m-normal") else "0% / "+ tableData[2].get_text()
                         else:
-                            obtainedFrom += tableData[k].get_text() + " " # Rest of Table data
-                    obtainedFrom += "\n"
+                            obtainedFrom += tableData[2].get_text()
+                obtainedFrom += "\n"
     return obtainedFrom
 
 
@@ -564,15 +574,15 @@ async def perform_search(interaction: discord.Interaction, search: str):
     Types = get_Types(soup)
     Statistics = get_Statistics(soup, search)
     image_url = get_Image(soup, search)
-    CraftingTables = has_CraftingTables(soup)
-    Recipes = has_Recipes(soup)
-    UsedIn = has_UsedIn(soup)
+    hasCraftingTables = has_CraftingTables(soup)
+    hasRecipes = has_Recipes(soup)
+    hasUsedIn = has_UsedIn(soup)
     crafting = get_Crafting(soup)
     obtainedFrom = get_ObtainedFrom(soup)
 
     # Prepare the content to send
-    text_content = Statistics
-    #print(text_content)
+    text_content = obtainedFrom
+    print(text_content)
 
     # Truncate the message if it's too long for Discord
     if len(text_content) > 2000:
