@@ -92,15 +92,6 @@ def suggestions(search: str) -> str:
     suggest_data = suggest_response.json()
         
     suggestions = suggest_data.get('query', {}).get('prefixsearch', [])
-
-    if not suggestions:
-        return "No suggestions found."
-
-    # Build the suggestion response
-    suggestionsResponse = "No Page found. Did you mean:\n"
-    for suggestion in suggestions:
-        suggestionsResponse += " - " + suggestion['title'] + "\n"
-
     # Return the first suggestion (if available)
     return suggestions[0]['title'] if suggestions else None
 
@@ -110,11 +101,28 @@ def suggestions(search: str) -> str:
 def get_Description(soup: BeautifulSoup) -> str:
     Description = ""
     paraDiv = soup.find('div', class_="mw-parser-output")
-    paragraphs = paraDiv.find_all('p', recursive=False)
-    if len(paragraphs) > 0:
-        for i in range(len(paragraphs)):
-            if paragraphs[i].get_text() != "": 
-                Description += paragraphs[i].get_text() + "\n"
+    flavorText = paraDiv.find('div', class_="flavor-text")
+    if flavorText:
+        Description +=flavorText.get_text().replace(" ", "***") + "\n\n"
+    hatNote = paraDiv.find('div', class_="hat-note")
+    if hatNote:
+        Description += "*" + hatNote.get_text() + "*\n\n"
+    for child in paraDiv.children:
+        if child.name == 'p' and child.get_text() != "":
+            if child.find_all('audio'):
+                for audio in child.find_all('audio'):
+                    audio.decompose()
+            if child.find_all('sup'):
+                for sup in child.find_all('sup'):
+                    sup.decompose()
+            Description += child.get_text() + "\n"
+        if child.name == 'ul':
+            for li in child.find_all('li'):
+                if li.find('audio'):
+                    li.find('audio').decompose()
+                Description += "- " + li.get_text() + "\n"
+        if child.next_sibling and child.next_sibling.name == 'h2':
+            break
     return Description
 
 
@@ -131,12 +139,24 @@ def get_Types(soup: BeautifulSoup) -> str:
     return types
 
 
-# Function to get the statistics of the item                                #probably break this up later***********
-# params: soup (BeautifulSoup object) - the BeautifulSoup object
-# returns: statistics (str) - the statistics of the item
-def get_Statistics(soup: BeautifulSoup) -> str:
+# Function to get the statistics of the item
+# params:
+#         soup (BeautifulSoup object) - the BeautifulSoup object
+#         search (str) - the search term
+# returns: 
+#         statistics (str) - the statistics of the item
+def get_Statistics(soup: BeautifulSoup, search: str) -> str:
     statistics = ""
-    tables = soup.find_all('table', class_="stat")
+    tables = None
+    infobox = soup.find_all('div', class_="infobox item")
+    for info in infobox:
+        if info.find('div', class_="title"):
+            if search == info.find('div', class_="title").get_text():
+                tables = info.find_all('table', class_="stat")
+                break
+    if not tables:
+        tables = soup.find_all('table', class_="stat")
+
     if len(tables) > 0:
         tablerow = tables[0].find_all('tr')
         for j in range(len(tablerow)):
@@ -145,45 +165,57 @@ def get_Statistics(soup: BeautifulSoup) -> str:
             if len(tableHeader) > 0 and len(tableData) > 0:
                 statistics += tableHeader.get_text() + ": "  # Table Header
                 for k in range(len(tableData)):
-                    if tableHeader.get_text() == "Type":
+                    if tableHeader.get_text() == "Type":    # Types
                         tableDataA = tableData[k].find_all('a')
                         for l in range(len(tableDataA)):
-                            statistics += tableDataA[l].get_text() # Types
+                            statistics += tableDataA[l].get_text() 
                             if l+1 < len(tableDataA):
                                 statistics += " / "
-                    elif tableHeader.get_text() == "Rarity":
+                    elif tableHeader.get_text() == "Rarity":    # Rarity
                         tableDataA = tableData[k].find('a')
-                        statistics += Rarity[tableDataA['title']] + " " # Rarity
+                        statistics += Rarity[tableDataA['title']] + " " 
+                    elif tableHeader.get_text() == "Sell":   # Sell Price
                         tableDataA = tableData[k].find_all('span', class_="coin")
                         for l in range(len(tableDataA)):
                             tableDataCoin = tableDataA[l].find_all('span')
                             for m in range(len(tableDataCoin)):
-                                coinvalues = tableDataCoin[m].get_text().split() # Sell Price
+                                coinvalues = tableDataCoin[m].get_text().split()
                                 for n in range(len(coinvalues)):
                                     statistics += coinvalues[n] + " " if coinvalues[n] not in Coin else CoinDict[coinvalues[n]] + " "
                             if len(tableDataA) > 1:
                                 statistics += VersionDifference[l] + " "
-                    elif tableHeader.get_text() == "Tooltip":
+                    elif tableHeader.get_text() == "Tooltip":   # Tooltip
                         tableDataA = tableData[k].find('i').find('span')
                         for br in tableDataA.find_all('br'):
                             br.replace_with(' / ')
-                        statistics += tableDataA.get_text()  # Tooltip
+                        statistics += tableDataA.get_text()  
                     else:
                         statistics += tableData[k].get_text() + " " # Rest of Table data
             statistics += "\n"
-            statistics = statistics.replace("✔️", "✅")         
+            statistics = statistics.replace("✔️", "✅") # Replace checkmark for better visibility on discord
     return statistics
 
 
-# Fix/Improve Function to get the image of the item****************************
-def get_Image(soup):
+# Function to get the image of the item or the first image on the page if the item image is not found
+# params: 
+#         soup (BeautifulSoup object) - the BeautifulSoup object
+#         search (str) - the search term
+# returns: 
+#         image_url (str) - the image URL of the item
+def get_Image(soup: BeautifulSoup, search: str) -> str:
     image_url = ""
-    images = soup.find_all('img')
-    if len(images) > 0:
-        for i in range(len(images)):
-            if images[i]['src'] not in VersionEventMode:
-                image_url = "https://terraria.wiki.gg" + images[i]['src'] # remember to switch this depending on the wiki
+    images = soup.find_all('div', class_="section images")
+    for image in images:
+        itemImage = image.find('img', alt=search + " item sprite")
+        if itemImage:
+            image_url = "https://terraria.wiki.gg" + itemImage['src']
             break
+    if image_url == "":
+        allImages = soup.find_all('img')
+        for img in allImages:
+            if img['src'] not in VersionEventMode:
+                image_url = "https://terraria.wiki.gg" + img['src']
+                break
     return image_url
 
 
@@ -249,7 +281,11 @@ def get_Results(tableRow: BeautifulSoup, oldgen: bool, item: BeautifulSoup, resu
         if not item:
             item = result.find('a', class_='mw-redirect')
             if not item:
-                item = result.find('span', class_='i multi-line').find('span').find('span')
+                item = result.find('span', class_='i')
+                if not item:
+                    item = result.find('span', class_='i multi-line').find('span').find('span')
+        for id in result.find_all('span', class_='id'):
+            id.decompose()
         itemVersion = result.find('a', title='Old-gen console version')
         if itemVersion:
             oldgen = True
@@ -313,30 +349,33 @@ def get_Station(tableRow: BeautifulSoup, StationString: str) -> str:
 #        crafting (str) - the crafting of the item
 # returns:
 #        crafting (str) - updated version of the crafting of the item
-def get_Recipes(tables: BeautifulSoup) -> str:
-    oldgen = False
-    item = None
-    resultAmount = None
-    StationString = ""
-    crafting = "Recipe:\n"
-    tableRow = tables.find_all('tr')
-    for j in range(len(tableRow)):
-       
-        # Get the item name and version
-        newcrafting = ""
-        newcrafting, oldgen, item, resultAmount = get_Results(tableRow[j], oldgen, item, resultAmount)
-        crafting += newcrafting
+def get_Recipes(soup: BeautifulSoup) -> str:
+    crafting = ""
+    if has_Recipes(soup):
+        oldgen = False
+        item = None
+        resultAmount = None
+        StationString = ""
+        crafting = "Recipe:\n"
+        tables = soup.find_all('table', class_="recipes")
+        tableRow = tables[0].find_all('tr')
+        for j in range(len(tableRow)):
         
-        # Get the ingredients
-        crafting += get_Ingredients(tableRow[j])
+            # Get the item name and version
+            newcrafting = ""
+            newcrafting, oldgen, item, resultAmount = get_Results(tableRow[j], oldgen, item, resultAmount)
+            crafting += newcrafting
+            
+            # Get the ingredients
+            crafting += get_Ingredients(tableRow[j])
 
-        # Get the crafting station(s)
-        StationString = get_Station(tableRow[j], StationString)
-        crafting += StationString
+            # Get the crafting station(s)
+            StationString = get_Station(tableRow[j], StationString)
+            crafting += StationString
 
-        # Add the version difference if the item is from Old-gen console version
-        if oldgen:
-                crafting += " " + VersionDifference[1]
+            # Add the version difference if the item is from Old-gen console version
+            if oldgen:
+                    crafting += " " + VersionDifference[1]
 
     return crafting
 
@@ -347,30 +386,33 @@ def get_Recipes(tables: BeautifulSoup) -> str:
 #        crafting (str) - the crafting of the item
 # returns:
 #        crafting (str) - updated version of the crafting of the item
-def get_UsedIn(tables: BeautifulSoup) -> str:
-    oldgen = False
-    item = None
-    resultAmount = None
-    StationString = ""
-    crafting = "Used in:\n"
-    tableRow = tables.find_all('tr')
-    for j in range(len(tableRow)):
-        
-        # Get the item name and version
-        newcrafting = ""
-        newcrafting, oldgen, item, resultAmount = get_Results(tableRow[j], oldgen, item, resultAmount)
-        crafting += newcrafting
+def get_UsedIn(soup: BeautifulSoup) -> str:
+    crafting = ""
+    if has_UsedIn(soup):
+        oldgen = False
+        item = None
+        resultAmount = None
+        StationString = ""
+        crafting = "Used in:\n"
+        tables = soup.find_all('table', class_="recipes")
+        tableRow = tables[1].find_all('tr') if has_Recipes(soup) else tables[0].find_all('tr')
+        for j in range(len(tableRow)):
+            
+            # Get the item name and version
+            newcrafting = ""
+            newcrafting, oldgen, item, resultAmount = get_Results(tableRow[j], oldgen, item, resultAmount)
+            crafting += newcrafting
 
-        # Get the ingredients
-        crafting += get_Ingredients(tableRow[j])
+            # Get the ingredients
+            crafting += get_Ingredients(tableRow[j])
 
-        # Get the crafting station(s)
-        StationString = get_Station(tableRow[j], StationString)
-        crafting += StationString
+            # Get the crafting station(s)
+            StationString = get_Station(tableRow[j], StationString)
+            crafting += StationString
 
-        # Add the version difference if the item is from Old-gen console version
-        if oldgen:
-                crafting += " " + VersionDifference[1]
+            # Add the version difference if the item is from Old-gen console version
+            if oldgen:
+                    crafting += " " + VersionDifference[1]
 
     return crafting
 
@@ -380,54 +422,108 @@ def get_UsedIn(tables: BeautifulSoup) -> str:
 # returns: crafting (str) - the crafting of the item
 def get_Crafting(soup: BeautifulSoup) -> str:
     crafting = ""
-    Recipes1 = True # To get the Recipe only once
     craftingTables = has_CraftingTables(soup)
     Recipes = has_Recipes(soup)
     UsedIn = has_UsedIn(soup)
-    if craftingTables:
-        tables = soup.find_all('table', class_="recipes") 
-        if len(tables) > 0:
-            for i in range(len(tables)):
-                if Recipes and Recipes1:
-                    crafting += get_Recipes(tables[i])
-                    Recipes1 = False    
+    if craftingTables: 
+        if Recipes:
+            crafting += get_Recipes(soup)
 
-                elif UsedIn:
-                    if not Recipes1:
-                        crafting += "\n\n"
-                    crafting += get_UsedIn(tables[i])
+        if UsedIn:
+            if Recipes:
+                crafting += "\n\n"
+            crafting += get_UsedIn(soup)
 
     return crafting
 
 
 # Function to get the Obtained From table
+# params: soup (BeautifulSoup object) - the BeautifulSoup object
+# returns: obtainedFrom (str) - the obtained from of the item
 def get_ObtainedFrom(soup: BeautifulSoup) -> str:
     obtainedFrom = ""
-    tables = soup.find_all('table', class_="obtainedfrom")
-    if len(tables) > 0:
-        for i in range(len(tables)):
-            tableRow = tables[i].find_all('tr')
-            for j in range(len(tableRow)):
-                tableHeader = tableRow[j].find('th')
-                tableData = tableRow[j].find_all('td')
-                if len(tableHeader) > 0 and len(tableData) > 0:
-                    obtainedFrom += tableHeader.get_text() + ": "  # Table Header
-                    for k in range(len(tableData)):
-                        if tableHeader.get_text() == "Dropped by":
-                            tableDataA = tableData[k].find_all('a')
-                            for l in range(len(tableDataA)):
-                                obtainedFrom += tableDataA[l].get_text() # Dropped by
-                                if l+1 < len(tableDataA):
+    dropMenu = soup.find('div', class_="drop")
+    if dropMenu:
+        table = dropMenu.find('table')
+        if table:
+            tableRow = table.find_all('tr')
+            for i in range(len(tableRow)):
+                tableData = tableRow[i].find_all('td')
+                if tableData:
+                    dropTemp = ""
+                    # Item Drop Source
+                    # Remove the Desktop, Console and Mobile versions span
+                    if tableData[0].find('span', title="Desktop, Console and Mobile versions"):
+                        tableData[0].find('span', title="Desktop, Console and Mobile versions").decompose()
+                    if tableData[0].find('span', class_="eico"):
+                        tableData[0].find('span', class_="eico").decompose()
+                    # Item Drop Source Name
+                    obtainedFrom += tableData[0].find('span', class_="eil").get_text() + " "
+                    dropTemp += tableData[0].find('span', class_="eil").get_text() + " "
+                    # Item Drop Source Note
+                    if tableData[0].find('div', class_="note-text"):
+                        obtainedFrom += tableData[0].find('div', class_="note-text").get_text() + " "
+                        dropTemp += tableData[0].find('div', class_="note-text").get_text() + " "
+                    elif tableData[0].find('span', class_="note-text"):
+                        obtainedFrom += tableData[0].find('span', class_="note-text").get_text() + " "
+                        dropTemp += tableData[0].find('span', class_="note-text").get_text() + " "
+                    dropTemp += " | "
+                    obtainedFrom += " | "
+                    # Item Drop Amount
+                    if tableData[1]:
+                        obtainedFrom += tableData[1].get_text() + " | "
+                        dropTemp += tableData[1].get_text() + " | "
+                    # Item Drop Chance
+                    if tableData[2]:
+                        versionChances = False
+                        oldgen = False
+                        
+                        # Remove version span as well as record if there is a version difference
+                        if tableData[2].find('span', class_="i1") and tableData[2].find('span', class_="i3"):
+                            versionChances = True
+                            tableData[2].find('span', class_="i3").decompose()
+                            tableData[2].find('span', class_="i1").decompose()
+                        elif tableData[2].find('span', class_="i1"):
+                            tableData[2].find('span', class_="i1").decompose()
+                        elif tableData[2].find('span', class_="i3"):
+                            tableData[2].find('span', class_="i3").decompose()
+                            oldgen = True
+
+                        # if drop source has different chances for different versions or/and modes
+                        if versionChances:
+                            tableData[2].find('br').replace_with('`')
+                            # if drop source has different chances for different versions
+                            if tableData[2].find('span', class_="m-expert-master"):
+                                chances = tableData[2].span.span.get_text().split('`')
+                                obtainedFrom += chances[0] + "/ " + tableData[2].find('span', class_="m-expert-master").get_text() + "\n"
+                                obtainedFrom += dropTemp + chances[1] + "/ N/A " + VersionDifference[1]
+                            # if drop source has different chances for different versions only
+                            else:
+                                chances = tableData[2].span.get_text().split('`')
+                                obtainedFrom += chances[0] + "/ " + chances[0] + "\n"
+                                obtainedFrom += dropTemp + chances[1] + "/ " + chances[1] + VersionDifference[1]
+                        # if drop source has different chances for different modes
+                        elif tableData[2].find('span', class_="mode-content"):
+                            dropChance = tableData[2].find('span', class_="mode-content").find_all('span', recursive=False)
+                            for j in range(len(dropChance)):
+                                obtainedFrom += dropChance[j].get_text()
+                                if j+1 < len(dropChance):
                                     obtainedFrom += " / "
-                        elif tableHeader.get_text() == "Found in":
-                            tableDataA = tableData[k].find_all('a')
-                            for l in range(len(tableDataA)):
-                                obtainedFrom += tableDataA[l].get_text() # Found in
-                                if l+1 < len(tableDataA):
-                                    obtainedFrom += " / "
+                        # if drop source only drops in master mode
+                        elif "m-master" in tableRow[i]['class']:
+                            obtainedFrom += tableData[2].get_text() + " (Only Master Mode)"
+                        # if drop source only drops in expert/master or normal mode
+                        elif "m-normal" in tableRow[i]['class'] or "m-expert-master" in tableRow[i]['class'] :
+                            obtainedFrom += tableData[2].get_text() + " / N/A" if "m-normal" in tableRow[i]['class'] else "N/A / "+ tableData[2].get_text()
+                            if oldgen:
+                                obtainedFrom += " " + VersionDifference[1]
+                        # if drop source has the same chances for all versions and all modes
                         else:
-                            obtainedFrom += tableData[k].get_text() + " " # Rest of Table data
-                    obtainedFrom += "\n"
+                            obtainedFrom += tableData[2].get_text() + " / " + tableData[2].get_text()
+                            if oldgen:
+                                obtainedFrom += " " + VersionDifference[1]
+                    
+                obtainedFrom += "\n"
     return obtainedFrom
 
 
@@ -460,16 +556,16 @@ def format_Search(search: str):
     # Capitalize the first letter of each word in the search term except for "of", "the", and "'s"
     search = search.title()
     if search not in ExceptionWords:
-        search = search.replace("Of", "of").replace("The", "the").replace("'S", "'s")
+        search = search.replace("Of ", "of ").replace("The ", "the ").replace("'S", "'s").replace("In ", "in ").replace("And ", "and ").replace("A ", "a ")
 
     # Lowercase the second word if it is in the Mechanics list
     if search in LowercaseWords:
         search = search.lower()
 
     # Replace spaces with underscores
-    search = search.replace(" ", "_")
+    searchForUrl = search.replace(" ", "_")
 
-    return search
+    return search, searchForUrl
 
 
 # Function to fetch the Terraria wiki page
@@ -508,7 +604,7 @@ async def fetch_Terraria_Page(interaction: discord.Interaction, search: str):
 #        search (str) - the search term
 async def perform_search(interaction: discord.Interaction, search: str):
     # Format the search term
-    search = format_Search(search)
+    search, searchForUrl = format_Search(search)
 
     # Make a request to the Terraria wiki API
     html_content = await fetch_Terraria_Page(interaction, search)
@@ -516,11 +612,11 @@ async def perform_search(interaction: discord.Interaction, search: str):
     if not html_content:
         # If no page is found, get suggestions
         suggested_page = suggestions(search)
-        if suggested_page:
+        if suggested_page and suggested_page != search:
             # If there's a suggestion, perform the search with the first suggestion
             await perform_search(interaction, suggested_page)
         else:
-            await interaction.followup.send("No suggestions found.")
+            await interaction.followup.send('No page found named: "' + search + '".\nPlease check the spelling and try again.')
         return
 
     # Switched from htmlparser to BeautifulSoup for better parsing
@@ -529,16 +625,18 @@ async def perform_search(interaction: discord.Interaction, search: str):
     # Retrieve different sections of the wiki page # Currently for Debugging
     Description = get_Description(soup)
     Types = get_Types(soup)
-    Statistics = get_Statistics(soup)
-    image_url = get_Image(soup)
-    CraftingTables = has_CraftingTables(soup)
-    Recipes = has_Recipes(soup)
-    UsedIn = has_UsedIn(soup)
+    Statistics = get_Statistics(soup, search)
+    image_url = get_Image(soup, search)
+    hasCraftingTables = has_CraftingTables(soup)
+    hasRecipes = has_Recipes(soup)
+    hasUsedIn = has_UsedIn(soup)
+    recipes = get_Recipes(soup)
+    usedIn = get_UsedIn(soup)
     crafting = get_Crafting(soup)
     obtainedFrom = get_ObtainedFrom(soup)
 
     # Prepare the content to send
-    text_content = Statistics
+    text_content = crafting
     print(text_content)
 
     # Truncate the message if it's too long for Discord
