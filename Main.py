@@ -92,7 +92,6 @@ def suggestions(search: str) -> str:
     suggest_data = suggest_response.json()
         
     suggestions = suggest_data.get('query', {}).get('prefixsearch', [])
-    print(suggestions[0]['title'])
     # Return the first suggestion (if available)
     return suggestions[0]['title'] if suggestions else None
 
@@ -350,30 +349,33 @@ def get_Station(tableRow: BeautifulSoup, StationString: str) -> str:
 #        crafting (str) - the crafting of the item
 # returns:
 #        crafting (str) - updated version of the crafting of the item
-def get_Recipes(tables: BeautifulSoup) -> str:
-    oldgen = False
-    item = None
-    resultAmount = None
-    StationString = ""
-    crafting = "Recipe:\n"
-    tableRow = tables.find_all('tr')
-    for j in range(len(tableRow)):
-       
-        # Get the item name and version
-        newcrafting = ""
-        newcrafting, oldgen, item, resultAmount = get_Results(tableRow[j], oldgen, item, resultAmount)
-        crafting += newcrafting
+def get_Recipes(soup: BeautifulSoup) -> str:
+    crafting = ""
+    if has_Recipes(soup):
+        oldgen = False
+        item = None
+        resultAmount = None
+        StationString = ""
+        crafting = "Recipe:\n"
+        tables = soup.find_all('table', class_="recipes")
+        tableRow = tables[0].find_all('tr')
+        for j in range(len(tableRow)):
         
-        # Get the ingredients
-        crafting += get_Ingredients(tableRow[j])
+            # Get the item name and version
+            newcrafting = ""
+            newcrafting, oldgen, item, resultAmount = get_Results(tableRow[j], oldgen, item, resultAmount)
+            crafting += newcrafting
+            
+            # Get the ingredients
+            crafting += get_Ingredients(tableRow[j])
 
-        # Get the crafting station(s)
-        StationString = get_Station(tableRow[j], StationString)
-        crafting += StationString
+            # Get the crafting station(s)
+            StationString = get_Station(tableRow[j], StationString)
+            crafting += StationString
 
-        # Add the version difference if the item is from Old-gen console version
-        if oldgen:
-                crafting += " " + VersionDifference[1]
+            # Add the version difference if the item is from Old-gen console version
+            if oldgen:
+                    crafting += " " + VersionDifference[1]
 
     return crafting
 
@@ -384,30 +386,33 @@ def get_Recipes(tables: BeautifulSoup) -> str:
 #        crafting (str) - the crafting of the item
 # returns:
 #        crafting (str) - updated version of the crafting of the item
-def get_UsedIn(tables: BeautifulSoup) -> str:
-    oldgen = False
-    item = None
-    resultAmount = None
-    StationString = ""
-    crafting = "Used in:\n"
-    tableRow = tables.find_all('tr')
-    for j in range(len(tableRow)):
-        
-        # Get the item name and version
-        newcrafting = ""
-        newcrafting, oldgen, item, resultAmount = get_Results(tableRow[j], oldgen, item, resultAmount)
-        crafting += newcrafting
+def get_UsedIn(soup: BeautifulSoup) -> str:
+    crafting = ""
+    if has_UsedIn(soup):
+        oldgen = False
+        item = None
+        resultAmount = None
+        StationString = ""
+        crafting = "Used in:\n"
+        tables = soup.find_all('table', class_="recipes")
+        tableRow = tables[1].find_all('tr') if has_Recipes(soup) else tables[0].find_all('tr')
+        for j in range(len(tableRow)):
+            
+            # Get the item name and version
+            newcrafting = ""
+            newcrafting, oldgen, item, resultAmount = get_Results(tableRow[j], oldgen, item, resultAmount)
+            crafting += newcrafting
 
-        # Get the ingredients
-        crafting += get_Ingredients(tableRow[j])
+            # Get the ingredients
+            crafting += get_Ingredients(tableRow[j])
 
-        # Get the crafting station(s)
-        StationString = get_Station(tableRow[j], StationString)
-        crafting += StationString
+            # Get the crafting station(s)
+            StationString = get_Station(tableRow[j], StationString)
+            crafting += StationString
 
-        # Add the version difference if the item is from Old-gen console version
-        if oldgen:
-                crafting += " " + VersionDifference[1]
+            # Add the version difference if the item is from Old-gen console version
+            if oldgen:
+                    crafting += " " + VersionDifference[1]
 
     return crafting
 
@@ -417,27 +422,24 @@ def get_UsedIn(tables: BeautifulSoup) -> str:
 # returns: crafting (str) - the crafting of the item
 def get_Crafting(soup: BeautifulSoup) -> str:
     crafting = ""
-    Recipes1 = True # To get the Recipe only once
     craftingTables = has_CraftingTables(soup)
     Recipes = has_Recipes(soup)
     UsedIn = has_UsedIn(soup)
-    if craftingTables:
-        tables = soup.find_all('table', class_="recipes") 
-        if len(tables) > 0:
-            for i in range(len(tables)):
-                if Recipes and Recipes1:
-                    crafting += get_Recipes(tables[i])
-                    Recipes1 = False    
+    if craftingTables: 
+        if Recipes:
+            crafting += get_Recipes(soup)
 
-                elif UsedIn:
-                    if not Recipes1:
-                        crafting += "\n\n"
-                    crafting += get_UsedIn(tables[i])
+        if UsedIn:
+            if Recipes:
+                crafting += "\n\n"
+            crafting += get_UsedIn(soup)
 
     return crafting
 
 
 # Function to get the Obtained From table
+# params: soup (BeautifulSoup object) - the BeautifulSoup object
+# returns: obtainedFrom (str) - the obtained from of the item
 def get_ObtainedFrom(soup: BeautifulSoup) -> str:
     obtainedFrom = ""
     dropMenu = soup.find('div', class_="drop")
@@ -448,28 +450,79 @@ def get_ObtainedFrom(soup: BeautifulSoup) -> str:
             for i in range(len(tableRow)):
                 tableData = tableRow[i].find_all('td')
                 if tableData:
+                    dropTemp = ""
+                    # Item Drop Source
+                    # Remove the Desktop, Console and Mobile versions span
                     if tableData[0].find('span', title="Desktop, Console and Mobile versions"):
                         tableData[0].find('span', title="Desktop, Console and Mobile versions").decompose()
                     if tableData[0].find('span', class_="eico"):
                         tableData[0].find('span', class_="eico").decompose()
-                    obtainedFrom += tableData[0].find('span', class_="eil").get_text() + " - "
+                    # Item Drop Source Name
+                    obtainedFrom += tableData[0].find('span', class_="eil").get_text() + " "
+                    dropTemp += tableData[0].find('span', class_="eil").get_text() + " "
+                    # Item Drop Source Note
                     if tableData[0].find('div', class_="note-text"):
                         obtainedFrom += tableData[0].find('div', class_="note-text").get_text() + " "
+                        dropTemp += tableData[0].find('div', class_="note-text").get_text() + " "
                     elif tableData[0].find('span', class_="note-text"):
                         obtainedFrom += tableData[0].find('span', class_="note-text").get_text() + " "
+                        dropTemp += tableData[0].find('span', class_="note-text").get_text() + " "
+                    dropTemp += " | "
+                    obtainedFrom += " | "
+                    # Item Drop Amount
                     if tableData[1]:
-                        obtainedFrom += tableData[1].get_text() + " - "
+                        obtainedFrom += tableData[1].get_text() + " | "
+                        dropTemp += tableData[1].get_text() + " | "
+                    # Item Drop Chance
                     if tableData[2]:
-                        if tableData[2].find('span', class_="mode-content"):
-                            dropChance = tableData[2].find('span', class_="mode-content").find_all('span')
+                        versionChances = False
+                        oldgen = False
+                        
+                        # Remove version span as well as record if there is a version difference
+                        if tableData[2].find('span', class_="i1") and tableData[2].find('span', class_="i3"):
+                            versionChances = True
+                            tableData[2].find('span', class_="i3").decompose()
+                            tableData[2].find('span', class_="i1").decompose()
+                        elif tableData[2].find('span', class_="i1"):
+                            tableData[2].find('span', class_="i1").decompose()
+                        elif tableData[2].find('span', class_="i3"):
+                            tableData[2].find('span', class_="i3").decompose()
+                            oldgen = True
+
+                        # if drop source has different chances for different versions or/and modes
+                        if versionChances:
+                            tableData[2].find('br').replace_with('`')
+                            # if drop source has different chances for different versions
+                            if tableData[2].find('span', class_="m-expert-master"):
+                                chances = tableData[2].span.span.get_text().split('`')
+                                obtainedFrom += chances[0] + "/ " + tableData[2].find('span', class_="m-expert-master").get_text() + "\n"
+                                obtainedFrom += dropTemp + chances[1] + "/ N/A " + VersionDifference[1]
+                            # if drop source has different chances for different versions only
+                            else:
+                                chances = tableData[2].span.get_text().split('`')
+                                obtainedFrom += chances[0] + "/ " + chances[0] + "\n"
+                                obtainedFrom += dropTemp + chances[1] + "/ " + chances[1] + VersionDifference[1]
+                        # if drop source has different chances for different modes
+                        elif tableData[2].find('span', class_="mode-content"):
+                            dropChance = tableData[2].find('span', class_="mode-content").find_all('span', recursive=False)
                             for j in range(len(dropChance)):
                                 obtainedFrom += dropChance[j].get_text()
                                 if j+1 < len(dropChance):
                                     obtainedFrom += " / "
-                        elif tableRow[i].find('span', class_="m-normal") or tableRow[i].find('span', class_="m-expert-master"):
-                            obtainedFrom += tableData[2].get_text() + " / 0%" if tableRow[i].find('span', class_="m-normal") else "0% / "+ tableData[2].get_text()
+                        # if drop source only drops in master mode
+                        elif "m-master" in tableRow[i]['class']:
+                            obtainedFrom += tableData[2].get_text() + " (Only Master Mode)"
+                        # if drop source only drops in expert/master or normal mode
+                        elif "m-normal" in tableRow[i]['class'] or "m-expert-master" in tableRow[i]['class'] :
+                            obtainedFrom += tableData[2].get_text() + " / N/A" if "m-normal" in tableRow[i]['class'] else "N/A / "+ tableData[2].get_text()
+                            if oldgen:
+                                obtainedFrom += " " + VersionDifference[1]
+                        # if drop source has the same chances for all versions and all modes
                         else:
-                            obtainedFrom += tableData[2].get_text()
+                            obtainedFrom += tableData[2].get_text() + " / " + tableData[2].get_text()
+                            if oldgen:
+                                obtainedFrom += " " + VersionDifference[1]
+                    
                 obtainedFrom += "\n"
     return obtainedFrom
 
@@ -503,7 +556,7 @@ def format_Search(search: str):
     # Capitalize the first letter of each word in the search term except for "of", "the", and "'s"
     search = search.title()
     if search not in ExceptionWords:
-        search = search.replace("Of", "of").replace("The", "the").replace("'S", "'s")
+        search = search.replace("Of ", "of ").replace("The ", "the ").replace("'S", "'s").replace("In ", "in ").replace("And ", "and ").replace("A ", "a ")
 
     # Lowercase the second word if it is in the Mechanics list
     if search in LowercaseWords:
@@ -577,11 +630,13 @@ async def perform_search(interaction: discord.Interaction, search: str):
     hasCraftingTables = has_CraftingTables(soup)
     hasRecipes = has_Recipes(soup)
     hasUsedIn = has_UsedIn(soup)
+    recipes = get_Recipes(soup)
+    usedIn = get_UsedIn(soup)
     crafting = get_Crafting(soup)
     obtainedFrom = get_ObtainedFrom(soup)
 
     # Prepare the content to send
-    text_content = obtainedFrom
+    text_content = crafting
     print(text_content)
 
     # Truncate the message if it's too long for Discord
