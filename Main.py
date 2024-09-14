@@ -52,8 +52,11 @@ CoinDict = {
 
 # Version Differences list for Item Crafting
 VersionDifference = [
-    "(Desktop, Console and Mobile versions) /" ,
-    "(Old-gen console and 3DS versions) ",
+    "💻" ,
+    "🎮",
+    "📱",
+    "🕹",
+    "🖊"
 ]
 
 # List of Version/Event/Mode images that should not be displayed
@@ -95,6 +98,35 @@ def suggestions(search: str) -> str:
     # Return the first suggestion (if available)
     return suggestions[0]['title'] if suggestions else None
 
+
+def get_Version(item: BeautifulSoup) -> str:
+    version = ""
+    if item.find('div', class_="version-note"):
+        if item.find('a', title="Desktop version"):
+            version += VersionDifference[0]
+        if item.find('a', title="Console version"):
+            version += VersionDifference[1]
+        if item.find('a', title="Mobile version"):
+            version += VersionDifference[2]
+        if item.find('a', title="Old-gen console version"):
+            version += VersionDifference[3]
+        if item.find('a', title="Nintendo 3DS version"):
+            version += VersionDifference[4]
+    else:
+        if item.find('span', class_="i1"):
+            version += VersionDifference[0]
+        if item.find('span', class_="i2"):
+            version += VersionDifference[1]
+        if item.find('span', class_="i4"):
+            version += VersionDifference[2]
+        if item.find('span', class_="i3"):
+            version += VersionDifference[3]
+        if item.find('span', class_="i5"):
+            version += VersionDifference[4]
+        if item.find('span', class_="eico"):
+            item.find('span', class_="eico").clear()
+    return version
+
 # Function to get the description of the page
 # params: soup (BeautifulSoup object) - the BeautifulSoup object
 # returns: Description (str) - the description of the page
@@ -107,6 +139,9 @@ def get_Description(soup: BeautifulSoup) -> str:
     hatNote = paraDiv.find('div', class_="hat-note")
     if hatNote:
         Description += "*" + hatNote.get_text() + "*\n\n"
+    blockQuotes = paraDiv.find('blockquote')
+    if blockQuotes:
+        Description += "*" + blockQuotes.get_text() + "*\n\n"
     for child in paraDiv.children:
         if child.name == 'p' and child.get_text() != "":
             if child.find_all('audio'):
@@ -190,6 +225,12 @@ def get_Statistics(soup: BeautifulSoup, search: str) -> str:
                             br.replace_with(' / ')
                         statistics += tableDataA.get_text()  
                     else:
+                        if tableData[k].find_all('span', class_="i1"):
+                            tableData[k].find('span', class_="i1").replace_with("💻🎮📱")
+                        if tableData[k].find_all('span', class_="i3"):
+                            tableData[k].find('span', class_="i3").replace_with("🕹🖊")
+                        for br in tableData[k].find_all('br'):
+                            br.replace_with(' ')
                         statistics += tableData[k].get_text() + " " # Rest of Table data
             statistics += "\n"
             statistics = statistics.replace("✔️", "✅") # Replace checkmark for better visibility on discord
@@ -271,12 +312,11 @@ def has_UsedIn(soup: BeautifulSoup) -> bool:
 #         oldgen (bool) - updated version of the item
 #         item (BeautifulSoup object) - updated version of the item
 #         resultAmount (BeautifulSoup object) - updated version of the item
-def get_Results(tableRow: BeautifulSoup, oldgen: bool, item: BeautifulSoup, resultAmount: BeautifulSoup) -> Tuple[str, bool, BeautifulSoup, BeautifulSoup]:
+def get_Results(tableRow: BeautifulSoup, item: BeautifulSoup, resultAmount: BeautifulSoup, resultVersion: str) -> Tuple[str, BeautifulSoup, BeautifulSoup, str]:
     ResultString = ""
     result = tableRow.find('td', class_='result')
 
     if result: 
-        oldgen = False
         item = result.find('a', class_='mw-selflink selflink')
         if not item:
             item = result.find('a', class_='mw-redirect')
@@ -286,16 +326,14 @@ def get_Results(tableRow: BeautifulSoup, oldgen: bool, item: BeautifulSoup, resu
                     item = result.find('span', class_='i multi-line').find('span').find('span')
         for id in result.find_all('span', class_='id'):
             id.decompose()
-        itemVersion = result.find('a', title='Old-gen console version')
-        if itemVersion:
-            oldgen = True
+        resultVersion = get_Version(result)
         resultAmount = result.find('span', class_='am')
     if tableRow.find('td', class_="ingredients"):
-        ResultString += "\n" + item.get_text() + " "
+        ResultString += "\n" + resultVersion + item.get_text() + " "
         if resultAmount:
             ResultString += "x" + resultAmount.get_text() + " "
         ResultString += "= "
-    return ResultString, oldgen, item, resultAmount
+    return ResultString, item, resultAmount, resultVersion
 
 # Function to get the crafting ingredients
 # params: 
@@ -318,6 +356,7 @@ def get_Ingredients(tableRow: BeautifulSoup) -> str:
                 IngredientsString += " x" + Amount.get_text()
             else:
                 IngredientsString += " x1"
+            IngredientsString += " " + get_Version(Items[k])
             if k+1 < len(Items):
                 IngredientsString += " + "
     return IngredientsString
@@ -335,9 +374,9 @@ def get_Station(tableRow: BeautifulSoup, StationString: str) -> str:
             StationString += " at "
             for k in range(len(StationAmount)):
                 StationString += StationAmount[k].find('span').find('span').get_text()
+                StationString += " " + get_Version(StationAmount[k])
                 if k+1 < len(StationAmount):
                     StationString += " or "
-            
         else: 
             StationString = " " + StationExist.get_text()
     return StationString
@@ -352,9 +391,9 @@ def get_Station(tableRow: BeautifulSoup, StationString: str) -> str:
 def get_Recipes(soup: BeautifulSoup) -> str:
     crafting = ""
     if has_Recipes(soup):
-        oldgen = False
         item = None
         resultAmount = None
+        resultVersion = ""
         StationString = ""
         crafting = "Recipe:\n"
         tables = soup.find_all('table', class_="recipes")
@@ -363,7 +402,7 @@ def get_Recipes(soup: BeautifulSoup) -> str:
         
             # Get the item name and version
             newcrafting = ""
-            newcrafting, oldgen, item, resultAmount = get_Results(tableRow[j], oldgen, item, resultAmount)
+            newcrafting, item, resultAmount, resultVersion = get_Results(tableRow[j], item, resultAmount, resultVersion)
             crafting += newcrafting
             
             # Get the ingredients
@@ -372,10 +411,6 @@ def get_Recipes(soup: BeautifulSoup) -> str:
             # Get the crafting station(s)
             StationString = get_Station(tableRow[j], StationString)
             crafting += StationString
-
-            # Add the version difference if the item is from Old-gen console version
-            if oldgen:
-                    crafting += " " + VersionDifference[1]
 
     return crafting
 
@@ -389,9 +424,9 @@ def get_Recipes(soup: BeautifulSoup) -> str:
 def get_UsedIn(soup: BeautifulSoup) -> str:
     crafting = ""
     if has_UsedIn(soup):
-        oldgen = False
         item = None
         resultAmount = None
+        resultVersion = ""
         StationString = ""
         crafting = "Used in:\n"
         tables = soup.find_all('table', class_="recipes")
@@ -400,7 +435,7 @@ def get_UsedIn(soup: BeautifulSoup) -> str:
             
             # Get the item name and version
             newcrafting = ""
-            newcrafting, oldgen, item, resultAmount = get_Results(tableRow[j], oldgen, item, resultAmount)
+            newcrafting, item, resultAmount, resultVersion = get_Results(tableRow[j], item, resultAmount, resultVersion)
             crafting += newcrafting
 
             # Get the ingredients
@@ -409,10 +444,6 @@ def get_UsedIn(soup: BeautifulSoup) -> str:
             # Get the crafting station(s)
             StationString = get_Station(tableRow[j], StationString)
             crafting += StationString
-
-            # Add the version difference if the item is from Old-gen console version
-            if oldgen:
-                    crafting += " " + VersionDifference[1]
 
     return crafting
 
@@ -454,9 +485,9 @@ def get_ObtainedFrom(soup: BeautifulSoup) -> str:
                     # Item Drop Source
                     # Remove the Desktop, Console and Mobile versions span
                     if tableData[0].find('span', title="Desktop, Console and Mobile versions"):
-                        tableData[0].find('span', title="Desktop, Console and Mobile versions").decompose()
+                        tableData[0].find('span', title="Desktop, Console and Mobile versions").clear()
                     if tableData[0].find('span', class_="eico"):
-                        tableData[0].find('span', class_="eico").decompose()
+                        tableData[0].find('span', class_="eico").clear()
                     # Item Drop Source Name
                     obtainedFrom += tableData[0].find('span', class_="eil").get_text() + " "
                     dropTemp += tableData[0].find('span', class_="eil").get_text() + " "
@@ -467,8 +498,8 @@ def get_ObtainedFrom(soup: BeautifulSoup) -> str:
                     elif tableData[0].find('span', class_="note-text"):
                         obtainedFrom += tableData[0].find('span', class_="note-text").get_text() + " "
                         dropTemp += tableData[0].find('span', class_="note-text").get_text() + " "
-                    dropTemp += " | "
-                    obtainedFrom += " | "
+                    dropTemp += get_Version(tableData[0]) + " | "
+                    obtainedFrom += get_Version(tableData[0]) + " | "
                     # Item Drop Amount
                     if tableData[1]:
                         obtainedFrom += tableData[1].get_text() + " | "
@@ -477,6 +508,7 @@ def get_ObtainedFrom(soup: BeautifulSoup) -> str:
                     if tableData[2]:
                         versionChances = False
                         oldgen = False
+                        desktop = False
                         
                         # Remove version span as well as record if there is a version difference
                         if tableData[2].find('span', class_="i1") and tableData[2].find('span', class_="i3"):
@@ -485,6 +517,7 @@ def get_ObtainedFrom(soup: BeautifulSoup) -> str:
                             tableData[2].find('span', class_="i1").decompose()
                         elif tableData[2].find('span', class_="i1"):
                             tableData[2].find('span', class_="i1").decompose()
+                            desktop = True
                         elif tableData[2].find('span', class_="i3"):
                             tableData[2].find('span', class_="i3").decompose()
                             oldgen = True
@@ -495,13 +528,13 @@ def get_ObtainedFrom(soup: BeautifulSoup) -> str:
                             # if drop source has different chances for different versions
                             if tableData[2].find('span', class_="m-expert-master"):
                                 chances = tableData[2].span.span.get_text().split('`')
-                                obtainedFrom += chances[0] + "/ " + tableData[2].find('span', class_="m-expert-master").get_text() + "\n"
-                                obtainedFrom += dropTemp + chances[1] + "/ N/A " + VersionDifference[1]
+                                obtainedFrom += chances[0] + "/ " + tableData[2].find('span', class_="m-expert-master").get_text() + VersionDifference[0] + VersionDifference[1] + VersionDifference[2] + "\n"
+                                obtainedFrom += dropTemp + chances[1] + "/ N/A " + VersionDifference[3] + VersionDifference[4]
                             # if drop source has different chances for different versions only
                             else:
                                 chances = tableData[2].span.get_text().split('`')
-                                obtainedFrom += chances[0] + "/ " + chances[0] + "\n"
-                                obtainedFrom += dropTemp + chances[1] + "/ " + chances[1] + VersionDifference[1]
+                                obtainedFrom += chances[0] + "/ " + chances[0] + VersionDifference[0] + VersionDifference[1] + VersionDifference[2] + "\n"
+                                obtainedFrom += dropTemp + chances[1] + "/ " + chances[1] + VersionDifference[3] + VersionDifference[4]
                         # if drop source has different chances for different modes
                         elif tableData[2].find('span', class_="mode-content"):
                             dropChance = tableData[2].find('span', class_="mode-content").find_all('span', recursive=False)
@@ -516,15 +549,80 @@ def get_ObtainedFrom(soup: BeautifulSoup) -> str:
                         elif "m-normal" in tableRow[i]['class'] or "m-expert-master" in tableRow[i]['class'] :
                             obtainedFrom += tableData[2].get_text() + " / N/A" if "m-normal" in tableRow[i]['class'] else "N/A / "+ tableData[2].get_text()
                             if oldgen:
-                                obtainedFrom += " " + VersionDifference[1]
+                                obtainedFrom += " " + VersionDifference[3] + VersionDifference[4]
+                            if desktop:
+                                obtainedFrom += " " + VersionDifference[0] + VersionDifference[1] + VersionDifference[2]
                         # if drop source has the same chances for all versions and all modes
                         else:
                             obtainedFrom += tableData[2].get_text() + " / " + tableData[2].get_text()
                             if oldgen:
-                                obtainedFrom += " " + VersionDifference[1]
+                                obtainedFrom += " " + VersionDifference[3] + VersionDifference[4]
+                            if desktop:
+                                obtainedFrom += " " + VersionDifference[0] + VersionDifference[1] + VersionDifference[2]
                     
                 obtainedFrom += "\n"
     return obtainedFrom
+
+
+def has_Notes(soup: BeautifulSoup) -> bool:
+    notes = False
+    notesDiv = soup.find_all('h2')
+    for h2 in notesDiv:
+        if h2.find('span', id="Notes"):
+            notes = True
+            break
+    return notes
+
+
+def get_Notes(soup: BeautifulSoup) -> str:
+    notes = ""
+    if has_Notes(soup):
+        notesDiv = soup.find_all('h2')
+        for h2 in notesDiv:
+            if h2.find('span', id="Notes"):
+                note = h2
+                break
+        for sibling in note.next_siblings:
+            if sibling.name == 'ul':
+                for li in sibling.find_all('li', recursive=False):
+                    for eico in li.find_all('span', class_="i1"):
+                        eico.decompose()
+                    for sup in li.find_all('sup'):
+                        sup.decompose()
+                    for rarity in li.find_all('span', class_="rarity"):
+                        rarityReplacement = Rarity[rarity.find('a')['title']]
+                        rarity.find('s').replace_with(rarityReplacement)
+                    notesTemp = ""
+                    if li.find('ul'):
+                        for subli in li.find_all('li'):
+                            notesTemp += "  - " + subli.get_text() + "\n"
+                        li.find('ul').decompose()
+                    notes += "- " + li.get_text() + notesTemp if notesTemp != "" else "- " + li.get_text() + "\n"
+            if sibling.name == 'h2':
+                break
+    return notes
+
+
+def get_Tips(soup: BeautifulSoup) -> str:
+    tips = ""
+    tipsDiv = soup.find('div', class_="tips")
+    if tipsDiv:
+        tips += tipsDiv.get_text() + "\n"
+    return tips
+
+def get_Trivia(soup: BeautifulSoup) -> str:
+    trivia = ""
+    triviaDiv = soup.find('div', class_="trivia")
+    if triviaDiv:
+        trivia += triviaDiv.get_text() + "\n"
+    return trivia
+
+def get_History(soup: BeautifulSoup) -> str:
+    history = ""
+    historyDiv = soup.find('div', class_="history")
+    if historyDiv:
+        history += historyDiv.get_text() + "\n"
+    return history
 
 
 # Function to format the search term
@@ -634,13 +732,15 @@ async def perform_search(interaction: discord.Interaction, search: str):
     usedIn = get_UsedIn(soup)
     crafting = get_Crafting(soup)
     obtainedFrom = get_ObtainedFrom(soup)
+    hasNotes = has_Notes(soup)
+    notes = get_Notes(soup)
 
     # Prepare the content to send
-    text_content = crafting
+    text_content = obtainedFrom
     print(text_content)
 
     # Truncate the message if it's too long for Discord
-    if len(text_content) > 2000:
+    if len(text_content) > 1900:
         text_content = text_content[:1800] + "...\nContent too long. Please check the wiki for more details."
     
     # Send the image and content to the Discord interaction
