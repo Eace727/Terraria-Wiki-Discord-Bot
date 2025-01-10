@@ -568,18 +568,20 @@ class SelectView(discord.ui.View):
     
     
 
-    options =[
-        discord.SelectOption(label="Description"),
-        discord.SelectOption(label="Stats"),
-        discord.SelectOption(label="Obtained From"),
-        discord.SelectOption(label="Crafting")
-    ]
-    if (has_Recipes(self.soup) == True):
-        options.append(discord.SelectOption(label="Recipes"))
-    if (has_UsedIn(self.soup) == True):
-        options.append(discord.SelectOption(label="Used In"))
-    #Make the actual drop down menu
-    @discord.ui.select(placeholder="Sections", options=options)
+        self.options =[
+                discord.SelectOption(label="Description"),
+                discord.SelectOption(label="Stats"),
+                discord.SelectOption(label="Obtained From"),
+                discord.SelectOption(label="Crafting")
+            ] 
+        if (has_Recipes(self.soup) == True):
+            self.options.append(discord.SelectOption(label="Recipes"))
+        if (has_UsedIn(self.soup) == True):
+            self.options.append(discord.SelectOption(label="Used In"))
+
+        #Make the actual drop down menu
+        
+        self.add_item(discord.ui.select(placeholder="Sections", options=self.options, callback=self.select_callback))
 
     #What the Menu Does when an Option is Selected
     async def select_callback(self, interaction: discord.Interaction,select: discord.ui.Select):
