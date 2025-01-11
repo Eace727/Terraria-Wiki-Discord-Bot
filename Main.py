@@ -576,8 +576,6 @@ class SelectView(discord.ui.View):
             ] 
         if (has_Recipes(self.soup) == True):
             self.options.append(discord.SelectOption(label="Recipes"))
-        if (has_UsedIn(self.soup) == True):
-            self.options.append(discord.SelectOption(label="Used In"))
 
         #Make the actual drop down menu
         select = discord.ui.Select(placeholder="Sections", options=self.options)
@@ -624,16 +622,6 @@ class SelectView(discord.ui.View):
                 url="https://terraria.wiki.gg/" + self.searchForUrl,
                 description = get_ObtainedFrom(self.soup),
                 color = discord.Color.red()
-            )
-            embed.set_thumbnail(url=get_Image(self.soup))
-            await interaction.response.edit_message(embed=embed, view=SelectView(self.search, self.searchForUrl, self.soup))
-        #For Used In
-        elif selected_option == "Used In":
-            embed = discord.Embed(
-                title= self.search,
-                url="https://terraria.wiki.gg/" + self.searchForUrl,
-                description = get_UsedIn(self.soup),
-                color = discord.Color.orange()
             )
             embed.set_thumbnail(url=get_Image(self.soup))
             await interaction.response.edit_message(embed=embed, view=SelectView(self.search, self.searchForUrl, self.soup))
