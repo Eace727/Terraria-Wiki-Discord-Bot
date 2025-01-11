@@ -580,12 +580,13 @@ class SelectView(discord.ui.View):
             self.options.append(discord.SelectOption(label="Used In"))
 
         #Make the actual drop down menu
-        
-        self.add_item(discord.ui.select(placeholder="Sections", options=self.options, callback=self.select_callback))
+        select = discord.ui.Select(placeholder="Sections", options=self.options)
+        select.callback = self.select_callback
+        self.add_item(select)
 
     #What the Menu Does when an Option is Selected
-    async def select_callback(self, interaction: discord.Interaction,select: discord.ui.Select):
-        selected_option = select.values[0]
+    async def select_callback(self, interaction: discord.Interaction):
+        selected_option = interaction.data['values'][0]
         #For Description
         if selected_option =="Description":
             embed = discord.Embed(
